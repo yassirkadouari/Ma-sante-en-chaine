@@ -3,6 +3,15 @@
 
 Ce fichier sert de sommaire technique et de preuve de mise a jour du projet.
 
+## Journal rapide (maj)
+
+| Date | Action | Fichiers touches |
+| --- | --- | --- |
+| 05 Mars 2026 | Architecture initiale (frontend/backend/smart-contracts) | documentation.md |
+| 05 Mars 2026 | Modele Ordonnance Rust + UI roles | smart-contracts/ordonnance.rs, frontend/src/app |
+| 12 Mars 2026 | API events + hashing + verification | backend/src/models, backend/src/routes, backend/src/utils |
+| 12 Mars 2026 | Taxonomie events + POC wallet | backend/src/config, frontend/src/app/login/page.tsx |
+
 ## Etape 1 : Initialisation de l'architecture (05 Mars 2026)
 But : mettre un socle clair avec separation stricte des couches et du flux de donnees.
 
