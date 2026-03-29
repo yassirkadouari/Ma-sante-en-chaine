@@ -11,6 +11,9 @@ Ce fichier sert de sommaire technique et de preuve de mise a jour du projet.
 | 05 Mars 2026 | Modele Ordonnance Rust + UI roles | smart-contracts/ordonnance.rs, frontend/src/app |
 | 12 Mars 2026 | API events + hashing + verification | backend/src/models, backend/src/routes, backend/src/utils |
 | 12 Mars 2026 | Taxonomie events + POC wallet | backend/src/config, frontend/src/app/login/page.tsx |
+| 13 Mars 2026 | Guards role-based (frontend + backend) | frontend/src/app/dashboard/layout.tsx, backend/src/routes/events.js |
+| 13 Mars 2026 | UX QR patient (generation + scan) | frontend/src/app/dashboard/patient/page.tsx, frontend/src/app/dashboard/medecin/page.tsx |
+| 13 Mars 2026 | Pharmacie: ajout medicaments + creation ordonnance (POC) | frontend/src/app/dashboard/pharmacie/page.tsx |
 
 ## Etape 1 : Initialisation de l'architecture (05 Mars 2026)
 But : mettre un socle clair avec separation stricte des couches et du flux de donnees.

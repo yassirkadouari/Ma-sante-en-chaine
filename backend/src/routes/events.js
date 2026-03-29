@@ -5,6 +5,16 @@ const { EVENT_TYPES, ACTOR_ROLES, HASH_VERSION, EVENT_VERSION } = require("../co
 
 const router = express.Router();
 
+function requireRole(allowedRoles) {
+  return (req, res, next) => {
+    const role = req.header("x-user-role");
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    return next();
+  };
+}
+
 function buildHashPayload(eventDoc) {
   return {
     patientId: eventDoc.patientId,
@@ -27,7 +37,7 @@ router.get("/types", (req, res) => {
   });
 });
 
-router.post("/", async (req, res) => {
+router.post("/", requireRole(["MEDECIN", "PHARMACIE", "HOPITAL", "LABO", "ASSURANCE"]), async (req, res) => {
   try {
     const { patientId, actorId, actorRole, eventType, eventData, occurredAt, consent, audit } = req.body;
 
@@ -106,7 +116,7 @@ router.post("/:id/verify", async (req, res) => {
   }
 });
 
-router.post("/:id/anchor", async (req, res) => {
+router.post("/:id/anchor", requireRole(["ASSURANCE", "ANAM"]), async (req, res) => {
   try {
     const eventDoc = await MedicalEvent.findById(req.params.id);
     if (!eventDoc) {
