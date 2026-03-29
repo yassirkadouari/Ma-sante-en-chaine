@@ -1,0 +1,18 @@
+﻿@import "tailwindcss";
+
+@theme {
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-neutral-950 text-neutral-200 antialiased font-sans;
+  }
+}
+
+.glitch-text {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
