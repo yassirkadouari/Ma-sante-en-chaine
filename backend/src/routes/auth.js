@@ -82,7 +82,7 @@ router.post("/nonce", async (req, res, next) => {
       role,
       roles,
       identity,
-      requiresProfile: !identity,
+      requiresProfile: !identity || !identityService.isUserProfileComplete(identity),
       nonce,
       message,
       expiresAt: expiresAt.toISOString()

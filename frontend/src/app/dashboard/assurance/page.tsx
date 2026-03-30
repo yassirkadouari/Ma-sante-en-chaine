@@ -1,72 +1,174 @@
-﻿import { ShieldCheck, ArrowRightLeft, Database } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
+import { apiRequest } from "@/lib/api";
+
+type ClaimItem = {
+  claimId: string;
+  sourceType: "PRESCRIPTION" | "VISIT" | "OPERATION";
+  sourceId: string;
+  patientWallet: string;
+  providerWallet?: string;
+  providerRole?: string;
+  amountRequested: number;
+  amountApproved?: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reason?: string;
+  verification?: {
+    method?: string;
+    anchorValid?: boolean;
+    anchorStatus?: string;
+  };
+  createdAt?: string;
+};
 
 export default function AssuranceDashboard() {
+  const [items, setItems] = useState<ClaimItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState("PENDING");
+  const [decisionReason, setDecisionReason] = useState("");
+  const [approveAmount, setApproveAmount] = useState("");
+  const [targetClaimId, setTargetClaimId] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = async () => {
+    const response = await apiRequest<{ items: ClaimItem[] }>({ path: `/claims?status=${statusFilter}` });
+    setItems(response.items || []);
+  };
+
+  useEffect(() => {
+    refresh().catch((error) => setStatus(error.message));
+  }, [statusFilter]);
+
+  const reviewClaim = async (claimId: string, decision: "APPROVED" | "REJECTED") => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      await apiRequest({
+        method: "PATCH",
+        path: `/claims/${claimId}/review`,
+        signed: true,
+        body: {
+          decision,
+          amountApproved: decision === "APPROVED" ? Number(approveAmount || 0) || undefined : 0,
+          reason: decisionReason || undefined
+        }
+      });
+      setStatus(`Claim ${claimId} ${decision}`);
+      await refresh();
+    } catch (error: any) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6 font-mono">
       <div className="flex justify-between items-center bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">
         <div>
           <h1 className="text-2xl font-bold text-white">NOEUD_ASSURANCE</h1>
-          <p className="text-amber-500 text-sm">SYS: Serveur Central CNSS [WEB3_SYNC: TRUE]</p>
+          <p className="text-amber-500 text-sm">Validation/refus des claims (ordonnances utilisees + visites + operations).</p>
         </div>
-        <div className="px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-400 font-bold rounded flex items-center gap-2 text-sm">
-          <ShieldCheck size={18} />
-          FRAUD_LEVEL: 0%
+        <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold rounded flex items-center gap-2 text-sm">
+          <ShieldCheck size={18} /> CLAIM_ENGINE
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 text-center">
-          <p className="text-neutral-500 text-xs mb-1">TX_PENDING</p>
-          <p className="text-3xl font-extrabold text-amber-500 glitch-text">8</p>
+      <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800 space-y-4">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-300"
+          >
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="ALL">ALL</option>
+          </select>
+          <input
+            value={targetClaimId}
+            onChange={(event) => setTargetClaimId(event.target.value)}
+            placeholder="Claim ID to review"
+            className="flex-1 p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-300"
+          />
+          <input
+            value={approveAmount}
+            onChange={(event) => setApproveAmount(event.target.value)}
+            placeholder="Approved amount (optional)"
+            className="p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-300"
+          />
         </div>
-        <div className="bg-neutral-900/50 p-5 rounded-xl border border-neutral-800 text-center">
-          <p className="text-neutral-500 text-xs mb-1">TOTAL_LIQUIDITY (24H)</p>
-          <p className="text-3xl font-extrabold text-white">14,250 DH</p>
+
+        <textarea
+          value={decisionReason}
+          onChange={(event) => setDecisionReason(event.target.value)}
+          placeholder="Decision reason"
+          className="w-full min-h-24 p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-300"
+        />
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={busy || !targetClaimId}
+            onClick={() => reviewClaim(targetClaimId, "APPROVED")}
+            className="px-4 py-2 bg-emerald-600 text-white rounded disabled:opacity-50 flex items-center gap-2"
+          >
+            <CheckCircle2 size={16} /> APPROVE_CLAIM
+          </button>
+          <button
+            type="button"
+            disabled={busy || !targetClaimId}
+            onClick={() => reviewClaim(targetClaimId, "REJECTED")}
+            className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50 flex items-center gap-2"
+          >
+            <XCircle size={16} /> REJECT_CLAIM
+          </button>
         </div>
-        <div className="bg-neutral-950 p-5 rounded-xl border border-amber-900 shadow-[0_0_10px_rgba(245,158,11,0.1)] text-center flex flex-col justify-center text-white">
-          <Database size={24} className="mx-auto mb-2 text-amber-500" />
-          <p className="font-bold text-xs text-amber-400">CHAIN_SYNCHRONIZED</p>
-        </div>
+
+        {status ? <p className="text-xs text-neutral-300">{status}</p> : null}
       </div>
 
       <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">
-        <h2 className="font-bold text-xl mb-4 flex items-center gap-2 text-white">
-          <ArrowRightLeft className="text-amber-500" /> MEMPOOL: Preuves de Délivrance (Rust Events)
-        </h2>
-        
-        <table className="w-full text-left border-collapse mt-4 text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 text-neutral-500">
-              <th className="p-3">EVENT_HASH</th>
-              <th className="p-3">VALIDATOR_NODE</th>
-              <th className="p-3">AMOUNT_REQUIRED</th>
-              <th className="p-3 text-right">EXECUTION</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-neutral-800/50 hover:bg-neutral-800/20">
-              <td className="p-3 font-mono text-amber-500/80"><ScanProofIcon/> 0x992...FEA1</td>
-              <td className="p-3 text-neutral-300">Pharmacie du Centre</td>
-              <td className="p-3 font-bold text-amber-400">340 DH</td>
-              <td className="p-3 text-right">
-                <button className="px-3 py-1.5 bg-amber-600/20 border border-amber-600/50 text-amber-400 font-bold text-xs rounded hover:bg-amber-600 hover:text-white transition">TRANSFER_FUNDS()</button>
-              </td>
-            </tr>
-            <tr className="border-b border-neutral-800/50 opacity-50">
-              <td className="p-3 font-mono text-amber-500/80"><ScanProofIcon/> 0x114...BB89</td>
-              <td className="p-3 text-neutral-300">Pharmacie Al Amal</td>
-              <td className="p-3 font-bold text-amber-400">120 DH</td>
-              <td className="p-3 text-right">
-                <span className="px-3 py-1.5 text-neutral-500 border border-neutral-700 font-bold text-xs rounded bg-neutral-900">SETTLED</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <h2 className="font-bold text-xl mb-4 text-white">Claims Queue</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-800 text-neutral-500">
+                <th className="p-2">CLAIM_ID</th>
+                <th className="p-2">TYPE</th>
+                <th className="p-2">PATIENT</th>
+                <th className="p-2">AMOUNT</th>
+                <th className="p-2">STATUS</th>
+                <th className="p-2">VERIFICATION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td className="p-2 text-neutral-500" colSpan={6}>
+                    No claims found.
+                  </td>
+                </tr>
+              ) : null}
+              {items.map((item) => (
+                <tr key={item.claimId} className="border-b border-neutral-800/50">
+                  <td className="p-2 text-amber-400">{item.claimId}</td>
+                  <td className="p-2 text-neutral-300">{item.sourceType}</td>
+                  <td className="p-2 text-neutral-300 break-all">{item.patientWallet}</td>
+                  <td className="p-2 text-neutral-300">{item.amountRequested} DH</td>
+                  <td className="p-2 text-neutral-300">{item.status}</td>
+                  <td className="p-2 text-neutral-300">
+                    {item.verification?.method || "-"} / {item.verification?.anchorStatus || "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
-}
-
-function ScanProofIcon() {
-  return <ShieldCheck size={14} className="inline text-green-500 mr-1" />;
 }

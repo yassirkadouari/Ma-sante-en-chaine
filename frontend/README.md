@@ -43,5 +43,5 @@ Use the Polkadot.js browser extension to sign login and request messages.
 To access admin dashboard:
 
 - Ensure backend `ADMIN_WALLETS` contains your wallet address.
-- Login via `/login?role=admin`.
+- Login via `/login` (role auto-detected from backend role registry).
 - Open `/dashboard/admin`.

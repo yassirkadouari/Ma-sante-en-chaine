@@ -74,6 +74,7 @@ Design principle:
 Backend scripts:
 - dev: node src/index.js
 - start: node src/index.js
+- test: node --test
 
 Note:
 - ethers is currently installed but wallet verification is implemented with Polkadot util-crypto.
@@ -109,6 +110,10 @@ Frontend scripts:
 
 Entry point:
 - backend/src/index.js
+
+Application factory:
+- backend/src/app.js
+  - Exports createApp() to make middleware/route stack testable without booting server listener
 
 Wiring:
 - Loads environment via dotenv
@@ -360,14 +365,73 @@ Signed routes require signed headers.
 
 - PATCH /admin/users/institution
   - Signed: yes
-  - Updates admin-managed role details:
+  - Ensures role is assigned in role registry and updates admin-managed role details:
     - role in {ASSURANCE, HOPITAL, PHARMACIE, MEDECIN}
     - departmentName required
     - institutionName required for non-doctor roles
+  - If wallet identity does not exist yet, backend creates bootstrap identity placeholder.
 
 - PATCH /admin/users/doctor-approval
   - Signed: yes
   - Approves or rejects doctor account
+
+### 7.6 Medical events (secure)
+
+All routes under /medical-events require JWT.
+Write routes require signed requests.
+
+- POST /medical-events/profile
+  - Role: HOPITAL
+  - Signed: yes
+  - Stores patient profile event (blood type, age, diseases) for a target patient wallet
+
+- POST /medical-events/visit
+  - Role: MEDECIN
+  - Signed: yes
+  - Links doctor visit to patient wallet
+  - Auto-creates insurance claim when amountClaim > 0
+  - Anchors event hash and enforces blockchain verification before claim issuance
+
+- POST /medical-events/operation
+  - Role: HOPITAL
+  - Signed: yes
+  - Links operation/intervention to patient wallet
+  - Auto-creates insurance claim
+  - Anchors event hash and enforces blockchain verification before claim issuance
+
+- GET /medical-events/mine
+  - Role: PATIENT
+  - Returns:
+    - latest profile (blood type, age, diseases)
+    - visits
+    - past operations
+    - current medications from decrypted prescriptions
+    - raw medical events list
+    - per-event blockchainVerified status
+
+### 7.7 Claims and insurance review
+
+All routes under /claims require JWT.
+Write routes require signed requests.
+
+- GET /claims
+  - Role PATIENT: returns own claims
+  - Role ASSURANCE: returns queue by status (default PENDING)
+
+- POST /claims/prescriptions/:recordId
+  - Role: PATIENT
+  - Signed: yes
+  - Creates claim for delivered ordonnance only
+  - Smart-contract style verification done via blockchain anchor hash/status check
+
+- PATCH /claims/:claimId/review
+  - Role: ASSURANCE
+  - Signed: yes
+  - Decision APPROVED or REJECTED
+  - Sets approved amount and review metadata
+  - Re-verifies source on blockchain before allowing review decision:
+    - ordonnance: hash + DELIVERED status
+    - visit/operation: anchored medical event hash
 
 ### 7.5 Legacy events API (current state)
 
@@ -394,6 +458,7 @@ Global dashboard guard:
   - Ensures session exists
   - Ensures route role matches session role
   - Shows identity label in header
+  - Redirects unauthorized users to unified /login page
 
 ### 8.2 Frontend libraries
 
@@ -418,6 +483,41 @@ Admin page supports:
 - Approve/reject doctors
 - View role registry with identity and approval states
 
+### 8.4 Assurance dashboard capabilities
+
+- Reads claims queue from /claims
+- Filters by status
+- Approves or rejects claims
+- Handles claims from:
+  - delivered ordonnances
+  - doctor visits
+  - hospital operations
+
+### 8.5 Hospital dashboard capabilities
+
+- Links operation to a patient wallet via /medical-events/operation
+- Automatically creates insurance claim associated with the operation
+- Creates/updates patient medical dossier profile (blood type, age, diseases)
+
+### 8.6 Patient dashboard capabilities
+
+- Reads complete medical events via /medical-events/mine
+- Displays:
+  - blood type, age, diseases
+  - visits
+  - past operations
+  - currently prescribed medications
+- Allows creating ordonnance reimbursement claims via /claims/prescriptions/:recordId
+- Medical profile is read-only for patient (managed by hospital)
+
+### 8.7 Unified login behavior
+
+- Single /login page for all roles
+- Role is auto-detected from backend nonce response
+- No role query parameter is required in URL
+- Redirect after login uses verified session role:
+  - /dashboard/<role>
+
 ## 9. Identity and Approval Rules (Current Business Logic)
 
 ### 9.1 User self-entry
@@ -427,6 +527,10 @@ Wallet owner provides:
 - nickname
 - dateOfBirth
 - cabinetName only for doctor profile creation
+
+Important:
+- Admin can assign a role to a wallet before this profile is filled.
+- The wallet owner still completes personal identity fields on first login.
 
 ### 9.2 Admin-entered data
 
@@ -539,7 +643,7 @@ Frontend .env.local expected:
 
 - Install Polkadot.js extension
 - Import wallet/account
-- Use role-specific login URLs or role selector from homepage
+- Use unified /login page (role is auto-detected from wallet roles in database)
 
 ## 14. Operational Notes and Known Issues
 
@@ -613,6 +717,12 @@ Before release:
 3. Add frontend E2E tests for role login and admin approval flows.
 4. Add load tests for signed endpoint throughput.
 
+Current test status implemented:
+- backend/test/identityService.test.js
+  - verifies medecin pending/approved access rules
+  - verifies assurance institution+department gate
+  - executed with node --test (pass)
+
 ### 17.6 DevOps and production readiness
 
 1. Add Docker Compose for backend + Mongo + frontend local parity.
@@ -635,3 +745,123 @@ Current implementation provides:
 - Identity and approval gates for doctor and institutional roles
 
 The most important next milestone is moving from Mongo-backed mock anchors to real blockchain anchoring, while preserving the current security guarantees and role workflows.
+
+## 19. Blockchain Implementation Handoff Pack
+
+This section is the implementation brief for your friend.
+
+### 19.1 Goal
+
+Replace the current Mongo-backed mock anchor implementation with a real blockchain implementation while keeping all API contracts and business rules stable.
+
+### 19.2 Current adapter to replace
+
+Current file:
+- backend/src/services/blockchainService.js
+
+Current persistence model used by adapter:
+- backend/src/models/BlockchainAnchor.js
+
+Current adapter methods that must stay available to route/service callers:
+- storeHash({ recordId, hash, ownerWallet, authorizedWallets })
+- verifyHash(recordId, candidateHash)
+- grantAccess(recordId, wallet, requestedByWallet)
+- revokeAccess(recordId, wallet, requestedByWallet)
+- isAuthorized(recordId, wallet)
+- deliverPrescription(recordId, pharmacyWallet)
+- cancelPrescription(recordId)
+
+Compatibility rule:
+- Keep return shapes and error semantics compatible so routes do not require large rewrites.
+
+### 19.3 Where blockchain checks are business-critical
+
+Prescription workflow:
+- backend/src/routes/prescriptions.js
+  - create: anchors hash
+  - read: verifies authorization + hash consistency
+  - deliver/cancel: transitions chain status
+  - grant/revoke: chain-level access list updates
+
+Claims workflow:
+- backend/src/routes/claims.js
+  - patient claim from ordonnance requires on-chain hash validity + DELIVERED status
+  - insurance review re-checks blockchain state before decision
+
+Medical events workflow:
+- backend/src/routes/medicalEventsSecure.js
+  - visit/operation/profile event hash anchoring
+  - verify hash before auto-claim issuance and in patient read model
+
+### 19.4 Record ID conventions (must be preserved)
+
+- Prescription anchors use prescription recordId.
+- Medical event anchors use `event:<mongoObjectId>`.
+
+If chain identifiers differ internally, adapter must map them transparently.
+
+### 19.5 Required chain-side capabilities
+
+Minimum parity with current logic:
+1. Store immutable hash per recordId.
+2. Verify candidate hash equals stored hash.
+3. Track lifecycle status:
+  - PRESCRIBED
+  - DELIVERED
+  - CANCELLED
+4. Maintain owner wallet and authorized wallets.
+5. Enforce owner-only grant/revoke.
+6. Enforce authorized pharmacy-only delivery.
+
+### 19.6 Suggested implementation strategy
+
+1. Keep `blockchainService.js` as a stable facade.
+2. Create chain client module (RPC/extrinsics/events) behind this facade.
+3. Add config-driven mode switch for safe rollout:
+  - mock (current)
+  - chain (new)
+4. Implement finality-aware write confirmation before returning success.
+5. Add reconciliation job to compare off-chain records with on-chain state.
+
+### 19.7 Error contract expectations
+
+Routes expect status/publicMessage style errors from adapter.
+
+Use these semantics:
+- 404: anchor not found
+- 403: forbidden actor/action
+- 409: invalid lifecycle transition or hash mismatch
+
+Keep messages close to current behavior to avoid frontend regressions.
+
+### 19.8 Acceptance criteria before merge
+
+Functional:
+1. End-to-end prescription lifecycle works with real chain adapter.
+2. Claim creation from delivered ordonnance succeeds only when chain verification passes.
+3. Insurance review rejects tampered or invalid sources.
+4. Medical event hash verification remains true for valid events.
+
+Quality:
+1. Existing backend tests still pass.
+2. Add new tests for chain adapter happy path + failure path.
+3. Add smoke test script covering:
+  - create ordonnance
+  - deliver ordonnance
+  - create claim
+  - approve/reject claim
+
+Operational:
+1. Document chain node prerequisites in README.
+2. Document required env vars for chain endpoint, signer, and network.
+3. Provide fallback instructions if chain node is unavailable.
+
+### 19.9 Push-ready handoff checklist
+
+Before handing off to your friend:
+1. Share this file and the route files listed in section 19.3.
+2. Share smart-contract reference files:
+  - smart-contracts/medical_event.rs
+  - smart-contracts/ordonnance.rs
+3. Confirm current backend branch starts and tests pass in mock mode.
+4. Agree on adapter interface freeze (section 19.2) before coding chain internals.

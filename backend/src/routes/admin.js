@@ -78,6 +78,14 @@ router.post("/users", requireSignedRequest, async (req, res, next) => {
 router.patch("/users/institution", requireSignedRequest, async (req, res, next) => {
   try {
     const parsed = institutionSchema.parse(req.body || {});
+
+    // Keep role registry and identity details in sync for a single admin action.
+    await roleService.assignRole({
+      walletAddress: parsed.walletAddress,
+      role: parsed.role,
+      actorWallet: req.auth.walletAddress
+    });
+
     const identity = await identityService.setRoleDetailsByAdmin({
       walletAddress: parsed.walletAddress,
       role: parsed.role,

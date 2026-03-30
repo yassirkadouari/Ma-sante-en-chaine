@@ -81,6 +81,10 @@ export default function MedecinDashboard() {
   const [items, setItems] = useState<PrescriptionSummary[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [visitPatientWallet, setVisitPatientWallet] = useState("");
+  const [visitDiagnosis, setVisitDiagnosis] = useState("");
+  const [visitAmount, setVisitAmount] = useState("");
+  const [visitNotes, setVisitNotes] = useState("");
 
   const refresh = async () => {
     const response = await apiRequest<{ items: PrescriptionSummary[] }>({ path: "/prescriptions" });
@@ -136,6 +140,30 @@ export default function MedecinDashboard() {
 
       setStatus(`New version ${response.recordId} created. Previous ${response.previousRecordId} cancelled.`);
       await refresh();
+    } catch (error: any) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const registerVisit = async () => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      const response = await apiRequest<{ eventId: string; claimId?: string | null }>({
+        method: "POST",
+        path: "/medical-events/visit",
+        signed: true,
+        body: {
+          patientWallet: visitPatientWallet,
+          diagnosis: visitDiagnosis,
+          notes: visitNotes || undefined,
+          amountClaim: Number(visitAmount || 0)
+        }
+      });
+
+      setStatus(`Visit registered: ${response.eventId} | Claim: ${response.claimId || "auto-not-created"}`);
     } catch (error: any) {
       setStatus(error.message);
     } finally {
@@ -207,6 +235,42 @@ export default function MedecinDashboard() {
         </div>
 
         {status ? <p className="text-xs text-neutral-300">{status}</p> : null}
+      </div>
+
+      <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800 space-y-4">
+        <h2 className="font-bold text-xl text-white">Register Visit (for insurance workflow)</h2>
+        <input
+          value={visitPatientWallet}
+          onChange={(event) => setVisitPatientWallet(event.target.value)}
+          placeholder="Patient wallet"
+          className="w-full p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-200"
+        />
+        <input
+          value={visitDiagnosis}
+          onChange={(event) => setVisitDiagnosis(event.target.value)}
+          placeholder="Visit diagnosis"
+          className="w-full p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-200"
+        />
+        <input
+          value={visitAmount}
+          onChange={(event) => setVisitAmount(event.target.value)}
+          placeholder="Claim amount"
+          className="w-full p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-200"
+        />
+        <textarea
+          value={visitNotes}
+          onChange={(event) => setVisitNotes(event.target.value)}
+          className="w-full min-h-24 p-3 bg-neutral-950 border border-neutral-700 rounded text-neutral-200"
+          placeholder="Notes"
+        />
+        <button
+          type="button"
+          disabled={busy || !visitPatientWallet || !visitDiagnosis}
+          onClick={registerVisit}
+          className="px-4 py-2 bg-emerald-600 text-white rounded disabled:opacity-50"
+        >
+          REGISTER_VISIT
+        </button>
       </div>
 
       <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">

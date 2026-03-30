@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const roleFromPath = pathname?.split("/dashboard/")[1]?.split("/")[0]?.toUpperCase();
 
     if (!session?.token || !roleFromPath || session.role !== roleFromPath) {
-      router.replace(`/login?role=${roleFromPath || "patient"}`);
+      router.replace("/login");
       return;
     }
 

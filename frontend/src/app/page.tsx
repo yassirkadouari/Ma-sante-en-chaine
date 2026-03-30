@@ -30,7 +30,7 @@ export default function Home() {
               </h2>
               <p className="text-neutral-400 mb-6 text-sm font-mono">Générez votre QR code unique et suivez vos remboursements via Oracle.</p>
             </div>
-            <Link href="/login?role=patient" className="text-center px-4 py-3 bg-blue-600/10 border border-blue-600/30 text-blue-400 font-mono font-bold rounded-lg hover:bg-blue-600 hover:text-white transition w-full">
+            <Link href="/login" className="text-center px-4 py-3 bg-blue-600/10 border border-blue-600/30 text-blue-400 font-mono font-bold rounded-lg hover:bg-blue-600 hover:text-white transition w-full">
               &gt; CONNECT_PATIENT
             </Link>        
           </div>
@@ -42,7 +42,7 @@ export default function Home() {
               </h2>
               <p className="text-neutral-400 mb-6 text-sm font-mono">Émission de contrats intelligents Rust pour prescriptions scellées sur registre.</p>
             </div>
-            <Link href="/login?role=medecin" className="text-center px-4 py-3 bg-emerald-600/10 border border-emerald-600/30 text-emerald-400 font-mono font-bold rounded-lg hover:bg-emerald-600 hover:text-white transition w-full">
+            <Link href="/login" className="text-center px-4 py-3 bg-emerald-600/10 border border-emerald-600/30 text-emerald-400 font-mono font-bold rounded-lg hover:bg-emerald-600 hover:text-white transition w-full">
               &gt; AUTH_MEDECIN
             </Link>
           </div>
@@ -54,7 +54,7 @@ export default function Home() {
               </h2>
               <p className="text-neutral-400 mb-6 text-sm font-mono">Scan de validité Web3 et mutation d'état de l'ordonnance (Statut: DELIVERED).</p>
             </div>
-            <Link href="/login?role=pharmacie" className="text-center px-4 py-3 bg-purple-600/10 border border-purple-600/30 text-purple-400 font-mono font-bold rounded-lg hover:bg-purple-600 hover:text-white transition w-full">
+            <Link href="/login" className="text-center px-4 py-3 bg-purple-600/10 border border-purple-600/30 text-purple-400 font-mono font-bold rounded-lg hover:bg-purple-600 hover:text-white transition w-full">
               &gt; TERMINAL_PHARMACIE
             </Link>     
           </div>
@@ -65,10 +65,10 @@ export default function Home() {
               <p className="text-neutral-400 mb-6 text-sm font-mono">Réseau CHU (Hôpitaux) et vérification automatisée de liquidité (CNSS/Assurances).</p>
             </div>
             <div className="flex gap-3">
-              <Link href="/login?role=assurance" className="text-center flex-1 px-4 py-3 bg-amber-600/10 border border-amber-600/30 text-amber-400 font-mono font-bold rounded-lg hover:bg-amber-600 hover:text-white transition">
+              <Link href="/login" className="text-center flex-1 px-4 py-3 bg-amber-600/10 border border-amber-600/30 text-amber-400 font-mono font-bold rounded-lg hover:bg-amber-600 hover:text-white transition">
                 &gt; ASSURANCE
               </Link>
-              <Link href="/login?role=hopital" className="text-center flex-1 px-4 py-3 bg-sky-600/10 border border-sky-600/30 text-sky-400 font-mono font-bold rounded-lg hover:bg-sky-600 hover:text-white transition">
+              <Link href="/login" className="text-center flex-1 px-4 py-3 bg-sky-600/10 border border-sky-600/30 text-sky-400 font-mono font-bold rounded-lg hover:bg-sky-600 hover:text-white transition">
                 &gt; CHU / HOPITAL
               </Link>
             </div>
@@ -79,7 +79,7 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-white mb-2">Admin Node</h2>
               <p className="text-neutral-400 mb-6 text-sm font-mono">Gestion des roles wallet (ADMIN/PATIENT/MEDECIN/PHARMACIE/HOPITAL/LABO/ASSURANCE).</p>
             </div>
-            <Link href="/login?role=admin" className="text-center px-4 py-3 bg-red-600/10 border border-red-600/30 text-red-400 font-mono font-bold rounded-lg hover:bg-red-600 hover:text-white transition w-full">
+            <Link href="/login" className="text-center px-4 py-3 bg-red-600/10 border border-red-600/30 text-red-400 font-mono font-bold rounded-lg hover:bg-red-600 hover:text-white transition w-full">
               &gt; ADMIN_CONSOLE
             </Link>
           </div>

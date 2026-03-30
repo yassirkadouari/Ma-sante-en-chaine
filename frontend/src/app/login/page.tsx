@@ -1,6 +1,6 @@
 ﻿"use client";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { LockKeyhole, Terminal } from "lucide-react";
 import { connectWallet, signMessage } from "@/lib/wallet";
 import { saveSession } from "@/lib/session";
@@ -11,9 +11,8 @@ function isDoctorRole(role: string) {
 }
 
 function LoginForm() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const role = useMemo(() => (searchParams.get("role") || "patient").toUpperCase(), [searchParams]);
+  const [role, setRole] = useState("UNKNOWN");
   const [walletStatus, setWalletStatus] = useState<string>("idle");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [requiresProfile, setRequiresProfile] = useState(false);
@@ -53,6 +52,7 @@ function LoginForm() {
       setWalletAddress(address);
 
       const noncePayload = await apiRequest<{
+        role: string;
         message: string;
         nonce: string;
         requiresProfile: boolean;
@@ -66,10 +66,12 @@ function LoginForm() {
         path: "/auth/nonce",
         auth: false,
         body: {
-          walletAddress: address,
-          role
+          walletAddress: address
         }
       });
+
+      const detectedRole = String(noncePayload.role || "UNKNOWN").toUpperCase();
+      setRole(detectedRole);
 
       setRequiresProfile(Boolean(noncePayload.requiresProfile));
       setExistingIdentity(noncePayload.identity || null);
@@ -79,7 +81,7 @@ function LoginForm() {
           throw new Error("Ce wallet n'a pas encore d'identite. Renseignez nom, surnom et date de naissance.");
         }
 
-        if (isDoctorRole(role) && !cabinetName.trim()) {
+        if (isDoctorRole(detectedRole) && !cabinetName.trim()) {
           throw new Error("Pour le medecin, le nom du cabinet est obligatoire.");
         }
       }
@@ -105,7 +107,7 @@ function LoginForm() {
         auth: false,
         body: {
           walletAddress: address,
-          role,
+          role: detectedRole,
           nonce: noncePayload.nonce,
           signature,
           profile: noncePayload.requiresProfile
@@ -127,7 +129,7 @@ function LoginForm() {
       });
 
       setWalletStatus("connected");
-      router.push(`/dashboard/${role.toLowerCase()}`);
+      router.push(`/dashboard/${session.role.toLowerCase()}`);
     } catch (error: any) {
       setError(error?.message || "Wallet authentication failed");
       setWalletStatus("error");
@@ -150,7 +152,7 @@ function LoginForm() {
 
       <div className="space-y-5">
         <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm">
-          ROLE: {role}
+          ROLE: {role} (auto-detected from database)
         </div>
 
         <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm break-all">
@@ -230,9 +232,7 @@ export default function Login() {
       <div className="absolute top-8 left-8 text-neutral-600 flex items-center gap-2 font-mono text-sm">
         <Terminal size={16} /> MA_SANTE_EN_CHAINE.exe
       </div>
-      <Suspense fallback={<div className="animate-pulse font-mono text-neutral-500">&gt; DECRYPTING...</div>}>
-        <LoginForm />
-      </Suspense>
+      <LoginForm />
     </div>
   );
 }

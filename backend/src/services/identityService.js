@@ -4,6 +4,7 @@ const { normalizeWallet } = require("../utils/signature");
 
 const detailsManagedRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE, ROLES.MEDECIN]);
 const employmentApprovalRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE]);
+const PENDING_PROFILE_MARKER = "PENDING_PROFILE";
 
 function normalizeOptional(value) {
   if (value === undefined || value === null) {
@@ -143,6 +144,34 @@ function toPublicIdentity(doc) {
   };
 }
 
+function isUserProfileComplete(identity) {
+  if (!identity) {
+    return false;
+  }
+
+  const fullName = normalizeOptional(identity.fullName);
+  const nickname = normalizeOptional(identity.nickname);
+  if (!fullName || !nickname) {
+    return false;
+  }
+
+  if (fullName === PENDING_PROFILE_MARKER || nickname === PENDING_PROFILE_MARKER) {
+    return false;
+  }
+
+  const dob = new Date(identity.dateOfBirth);
+  if (Number.isNaN(dob.getTime())) {
+    return false;
+  }
+
+  // Placeholder dates from bootstrap profiles should force first-login completion.
+  if (dob.getFullYear() <= 1900) {
+    return false;
+  }
+
+  return true;
+}
+
 async function getWalletIdentity(walletAddress) {
   const wallet = normalizeWallet(walletAddress);
   const doc = await WalletIdentity.findOne({ walletAddress: wallet }).lean();
@@ -155,13 +184,30 @@ async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWa
 
   if (existing) {
     const normalizedRole = normalizeRole(role);
+    let mustSave = false;
+
     if (existing.role !== normalizedRole) {
       existing.role = normalizedRole;
       if (normalizedRole === ROLES.MEDECIN && !existing.doctorApprovalStatus) {
         existing.doctorApprovalStatus = "PENDING";
       }
+      mustSave = true;
+    }
+
+    if (profileInput && !isUserProfileComplete(existing)) {
+      const normalizedProfile = normalizeProfileInput(profileInput, normalizedRole);
+      existing.fullName = normalizedProfile.fullName;
+      existing.nickname = normalizedProfile.nickname;
+      existing.dateOfBirth = normalizedProfile.dateOfBirth;
+      existing.cabinetName = normalizedProfile.cabinetName;
+      existing.updatedByWallet = normalizeWallet(actorWallet || walletAddress);
+      mustSave = true;
+    }
+
+    if (mustSave) {
       await existing.save();
     }
+
     return { identity: toPublicIdentity(existing), created: false };
   }
 
@@ -211,12 +257,22 @@ async function setRoleDetailsByAdmin({ walletAddress, role, institutionName, dep
   const normalized = normalizeRoleDetailsInput(role, institutionName, departmentName);
   const actor = normalizeWallet(actorWallet || walletAddress);
 
-  const existing = await WalletIdentity.findOne({ walletAddress: wallet });
+  let existing = await WalletIdentity.findOne({ walletAddress: wallet });
   if (!existing) {
-    throw Object.assign(new Error("Identity not found"), {
-      status: 404,
-      publicMessage: "User profile must be created by the wallet owner first"
+    existing = await WalletIdentity.create({
+      walletAddress: wallet,
+      role: normalized.role,
+      fullName: PENDING_PROFILE_MARKER,
+      nickname: PENDING_PROFILE_MARKER,
+      dateOfBirth: new Date("1900-01-01"),
+      institutionName: normalized.institutionName,
+      departmentName: normalized.departmentName,
+      doctorApprovalStatus: normalized.role === ROLES.MEDECIN ? "PENDING" : "APPROVED",
+      createdByWallet: actor,
+      updatedByWallet: actor
     });
+
+    return toPublicIdentity(existing);
   }
 
   existing.role = normalized.role;
@@ -290,6 +346,7 @@ module.exports = {
   upsertWalletIdentity,
   setRoleDetailsByAdmin,
   setDoctorApprovalByAdmin,
+  isUserProfileComplete,
   canAccessRole,
   toPublicIdentity
 };
