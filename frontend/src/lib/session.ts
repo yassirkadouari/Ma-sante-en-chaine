@@ -2,6 +2,18 @@ export type Session = {
   token: string;
   walletAddress: string;
   role: string;
+  identity?: {
+    role: string;
+    fullName: string;
+    nickname: string;
+    dateOfBirth: string;
+    cabinetName?: string | null;
+    institutionName?: string | null;
+    departmentName?: string | null;
+    doctorApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED";
+    approvedByWallet?: string | null;
+    approvedAt?: string | null;
+  } | null;
 };
 
 const KEY = "msc_session";

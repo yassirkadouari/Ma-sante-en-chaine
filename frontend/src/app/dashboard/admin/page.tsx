@@ -7,14 +7,27 @@ import { apiRequest } from "@/lib/api";
 type WalletRoleItem = {
   walletAddress: string;
   roles: string[];
+  identity?: {
+    role: string;
+    fullName: string;
+    nickname: string;
+    dateOfBirth: string;
+    cabinetName?: string | null;
+    institutionName?: string | null;
+    departmentName?: string | null;
+    doctorApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED";
+  } | null;
 };
 
 const ROLE_OPTIONS = ["ADMIN", "PATIENT", "MEDECIN", "PHARMACIE", "HOPITAL", "LABO", "ASSURANCE"];
+const DETAILS_ROLES = new Set(["ASSURANCE", "HOPITAL", "PHARMACIE", "MEDECIN"]);
 
 export default function AdminDashboard() {
   const [items, setItems] = useState<WalletRoleItem[]>([]);
   const [walletAddress, setWalletAddress] = useState("");
   const [role, setRole] = useState("PATIENT");
+  const [institutionName, setInstitutionName] = useState("");
+  const [departmentName, setDepartmentName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -63,6 +76,52 @@ export default function AdminDashboard() {
         }
       });
       setStatus(`Role ${role} revoked from ${walletAddress}`);
+      await refresh();
+    } catch (error: any) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateRoleDetails = async () => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      await apiRequest({
+        method: "PATCH",
+        path: "/admin/users/institution",
+        signed: true,
+        body: {
+          walletAddress,
+          role,
+          institutionName: institutionName || undefined,
+          departmentName
+        }
+      });
+      setStatus(`Approbation metier enregistree pour ${walletAddress} (${role}) avec institut/entreprise et departement`);
+      await refresh();
+    } catch (error: any) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setDoctorApproval = async (approved: boolean) => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      await apiRequest({
+        method: "PATCH",
+        path: "/admin/users/doctor-approval",
+        signed: true,
+        body: {
+          walletAddress,
+          approved
+        }
+      });
+      setStatus(`${walletAddress} -> ${approved ? "MEDECIN_APPROUVE" : "MEDECIN_REJETE"}`);
       await refresh();
     } catch (error: any) {
       setStatus(error.message);
@@ -127,6 +186,54 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {DETAILS_ROLES.has(role) ? (
+          <>
+            <input
+              type="text"
+              value={institutionName}
+              onChange={(event) => setInstitutionName(event.target.value)}
+              placeholder="Institut/Entreprise/Hopital/Pharmacie (obligatoire sauf MEDECIN)"
+              className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded"
+            />
+            <input
+              type="text"
+              value={departmentName}
+              onChange={(event) => setDepartmentName(event.target.value)}
+              placeholder="Departement (obligatoire)"
+              className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded"
+            />
+            <button
+              type="button"
+              disabled={busy || !walletAddress.trim() || !departmentName.trim() || (role !== "MEDECIN" && !institutionName.trim())}
+              onClick={updateRoleDetails}
+              className="px-4 py-2 bg-sky-600 text-white rounded disabled:opacity-50"
+            >
+              APPROVE_ROLE_DETAILS
+            </button>
+          </>
+        ) : null}
+
+        {role === "MEDECIN" ? (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled={busy || !walletAddress.trim()}
+              onClick={() => setDoctorApproval(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded disabled:opacity-50"
+            >
+              APPROVE_MEDECIN
+            </button>
+            <button
+              type="button"
+              disabled={busy || !walletAddress.trim()}
+              onClick={() => setDoctorApproval(false)}
+              className="px-4 py-2 bg-orange-600 text-white rounded disabled:opacity-50"
+            >
+              REJECT_MEDECIN
+            </button>
+          </div>
+        ) : null}
+
         {status ? <p className="text-xs text-neutral-300">{status}</p> : null}
       </div>
 
@@ -138,12 +245,14 @@ export default function AdminDashboard() {
               <tr className="border-b border-neutral-800 text-neutral-500">
                 <th className="p-2">WALLET</th>
                 <th className="p-2">ROLES</th>
+                <th className="p-2">IDENTITY</th>
+                <th className="p-2">APPROVAL</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td className="p-2 text-neutral-500" colSpan={2}>
+                  <td className="p-2 text-neutral-500" colSpan={4}>
                     No wallet roles assigned yet.
                   </td>
                 </tr>
@@ -152,6 +261,33 @@ export default function AdminDashboard() {
                 <tr key={item.walletAddress} className="border-b border-neutral-800/50">
                   <td className="p-2 text-red-400 break-all">{item.walletAddress}</td>
                   <td className="p-2 text-neutral-300">{item.roles.join(", ")}</td>
+                  <td className="p-2 text-neutral-300">
+                    {item.identity ? (
+                      <div className="space-y-1">
+                        <div>{item.identity.fullName} ({item.identity.nickname})</div>
+                        <div className="text-xs text-neutral-500">DOB: {item.identity.dateOfBirth}</div>
+                        {item.identity.role ? (
+                          <div className="text-xs text-neutral-500">ROLE_PROFILE: {item.identity.role}</div>
+                        ) : null}
+                        {item.identity.cabinetName ? (
+                          <div className="text-xs text-neutral-500">CABINET: {item.identity.cabinetName}</div>
+                        ) : null}
+                        {item.identity.institutionName ? (
+                          <div className="text-xs text-neutral-500">INSTITUT: {item.identity.institutionName}</div>
+                        ) : null}
+                        {item.identity.departmentName ? (
+                          <div className="text-xs text-neutral-500">DEPARTEMENT: {item.identity.departmentName}</div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-neutral-500 text-xs">Identity not registered yet</span>
+                    )}
+                  </td>
+                  <td className="p-2 text-neutral-300">
+                    {item.identity?.role === "MEDECIN"
+                      ? item.identity.doctorApprovalStatus || "PENDING"
+                      : "N/A"}
+                  </td>
                 </tr>
               ))}
             </tbody>

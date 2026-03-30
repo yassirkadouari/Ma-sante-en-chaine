@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect } from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, TerminalSquare } from "lucide-react";
 import { clearSession, loadSession } from "@/lib/session";
@@ -8,6 +9,7 @@ import { clearSession, loadSession } from "@/lib/session";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [identityLabel, setIdentityLabel] = useState<string>("");
 
   useEffect(() => {
     const session = loadSession();
@@ -15,7 +17,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (!session?.token || !roleFromPath || session.role !== roleFromPath) {
       router.replace(`/login?role=${roleFromPath || "patient"}`);
+      return;
     }
+
+    const profile = session.identity;
+    const name = profile?.fullName || session.walletAddress;
+    const nickname = profile?.nickname ? ` (${profile.nickname})` : "";
+    setIdentityLabel(`${name}${nickname} - ${session.role}`);
   }, [pathname, router]);
 
   const handleDisconnect = () => {
@@ -32,13 +40,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             MA_SANTÉ_EN_CHAÎNE
           </span>
         </div>
-        <button
-          type="button"
-          onClick={handleDisconnect}
-          className="text-neutral-500 hover:text-red-500 font-mono text-sm flex items-center gap-2 transition"
-        >
-          [ DISCONNECT ] <LogOut size={16} />
-        </button>
+        <div className="flex items-center gap-4">
+          {identityLabel ? <span className="text-xs text-neutral-400 font-mono">{identityLabel}</span> : null}
+          <button
+            type="button"
+            onClick={handleDisconnect}
+            className="text-neutral-500 hover:text-red-500 font-mono text-sm flex items-center gap-2 transition"
+          >
+            [ DISCONNECT ] <LogOut size={16} />
+          </button>
+        </div>
       </header>
       <main className="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8">{children}</main>
     </div>

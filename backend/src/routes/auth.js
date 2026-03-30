@@ -8,6 +8,7 @@ const { normalizeWallet, verifyWalletMessage } = require("../utils/signature");
 const { signSessionToken } = require("../utils/jwt");
 const { requireAuth } = require("../middleware/auth");
 const roleService = require("../services/roleService");
+const identityService = require("../services/identityService");
 
 const router = express.Router();
 
@@ -20,7 +21,15 @@ const verifySchema = z.object({
   walletAddress: z.string().min(10),
   role: z.string().min(2).optional(),
   nonce: z.string().min(10),
-  signature: z.string().min(10)
+  signature: z.string().min(10),
+  profile: z
+    .object({
+      fullName: z.string().min(2).optional(),
+      nickname: z.string().min(2).optional(),
+      dateOfBirth: z.string().min(4).optional(),
+      cabinetName: z.string().min(2).optional()
+    })
+    .optional()
 });
 
 function buildLoginMessage({ walletAddress, role, nonce, expiresAt }) {
@@ -38,6 +47,7 @@ router.post("/nonce", async (req, res, next) => {
     const parsed = nonceSchema.parse(req.body || {});
     const walletAddress = normalizeWallet(parsed.walletAddress);
     const roles = await roleService.getRolesForWallet(walletAddress);
+    const identity = await identityService.getWalletIdentity(walletAddress);
 
     if (!roles.length) {
       return res.status(403).json({ error: "Wallet has no assigned role" });
@@ -71,6 +81,8 @@ router.post("/nonce", async (req, res, next) => {
       walletAddress,
       role,
       roles,
+      identity,
+      requiresProfile: !identity,
       nonce,
       message,
       expiresAt: expiresAt.toISOString()
@@ -122,6 +134,21 @@ router.post("/verify", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid wallet signature" });
     }
 
+    const { identity } = await identityService.ensureWalletIdentity({
+      walletAddress,
+      role: nonceDoc.role,
+      profileInput: parsed.profile,
+      actorWallet: walletAddress
+    });
+
+    const access = identityService.canAccessRole(identity, nonceDoc.role);
+    if (!access.allowed) {
+      return res.status(403).json({
+        error: access.reason || "Access denied",
+        identity
+      });
+    }
+
     nonceDoc.usedAt = new Date();
     await nonceDoc.save();
 
@@ -136,6 +163,7 @@ router.post("/verify", async (req, res, next) => {
       walletAddress,
       role: nonceDoc.role,
       roles: allowedRoles,
+      identity,
       expiresIn: env.jwtTtl
     });
   } catch (error) {
@@ -155,11 +183,16 @@ router.get("/roles/:walletAddress", async (req, res, next) => {
 
 router.get("/me", requireAuth, async (req, res, next) => {
   try {
-    const roles = await roleService.getRolesForWallet(req.auth.walletAddress);
+    const [roles, identity] = await Promise.all([
+      roleService.getRolesForWallet(req.auth.walletAddress),
+      identityService.getWalletIdentity(req.auth.walletAddress)
+    ]);
+
     res.json({
       walletAddress: req.auth.walletAddress,
       role: req.auth.role,
-      roles
+      roles,
+      identity
     });
   } catch (error) {
     next(error);

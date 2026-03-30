@@ -6,12 +6,26 @@ import { connectWallet, signMessage } from "@/lib/wallet";
 import { saveSession } from "@/lib/session";
 import { apiRequest } from "@/lib/api";
 
+function isDoctorRole(role: string) {
+  return role === "MEDECIN";
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const role = useMemo(() => (searchParams.get("role") || "patient").toUpperCase(), [searchParams]);
   const [walletStatus, setWalletStatus] = useState<string>("idle");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [requiresProfile, setRequiresProfile] = useState(false);
+  const [existingIdentity, setExistingIdentity] = useState<{
+    fullName: string;
+    nickname: string;
+    dateOfBirth: string;
+  } | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [cabinetName, setCabinetName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +45,7 @@ function LoginForm() {
   const handleLogin = async () => {
     try {
       setError(null);
+
       setLoading(true);
       setWalletStatus("connecting");
 
@@ -40,6 +55,12 @@ function LoginForm() {
       const noncePayload = await apiRequest<{
         message: string;
         nonce: string;
+        requiresProfile: boolean;
+        identity: {
+          fullName: string;
+          nickname: string;
+          dateOfBirth: string;
+        } | null;
       }>({
         method: "POST",
         path: "/auth/nonce",
@@ -50,12 +71,34 @@ function LoginForm() {
         }
       });
 
+      setRequiresProfile(Boolean(noncePayload.requiresProfile));
+      setExistingIdentity(noncePayload.identity || null);
+
+      if (noncePayload.requiresProfile) {
+        if (!fullName.trim() || !nickname.trim() || !dateOfBirth) {
+          throw new Error("Ce wallet n'a pas encore d'identite. Renseignez nom, surnom et date de naissance.");
+        }
+
+        if (isDoctorRole(role) && !cabinetName.trim()) {
+          throw new Error("Pour le medecin, le nom du cabinet est obligatoire.");
+        }
+      }
+
       const signature = await signMessage(address, noncePayload.message);
 
       const session = await apiRequest<{
         token: string;
         walletAddress: string;
         role: string;
+        identity: {
+          role: string;
+          fullName: string;
+          nickname: string;
+          dateOfBirth: string;
+          cabinetName?: string | null;
+          institutionName?: string | null;
+          doctorApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED";
+        } | null;
       }>({
         method: "POST",
         path: "/auth/verify",
@@ -64,14 +107,23 @@ function LoginForm() {
           walletAddress: address,
           role,
           nonce: noncePayload.nonce,
-          signature
+          signature,
+          profile: noncePayload.requiresProfile
+            ? {
+                fullName,
+                nickname,
+                dateOfBirth,
+                cabinetName: cabinetName || undefined
+              }
+            : undefined
         }
       });
 
       saveSession({
         token: session.token,
         walletAddress: session.walletAddress,
-        role: session.role
+        role: session.role,
+        identity: session.identity
       });
 
       setWalletStatus("connected");
@@ -104,6 +156,51 @@ function LoginForm() {
         <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm break-all">
           WALLET: {walletAddress || "Not connected"}
         </div>
+
+        {requiresProfile ? (
+          <>
+            <div className="text-xs text-amber-300 font-mono bg-amber-900/20 border border-amber-700/50 rounded-lg p-3">
+              Profil identite introuvable pour ce wallet. Merci de renseigner les informations ci-dessous.
+            </div>
+
+            <input
+              type="text"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="Nom et prenom"
+              className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm"
+            />
+
+            <input
+              type="text"
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              placeholder="Surnom"
+              className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm"
+            />
+
+            <input
+              type="date"
+              value={dateOfBirth}
+              onChange={(event) => setDateOfBirth(event.target.value)}
+              className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm"
+            />
+
+            {isDoctorRole(role) ? (
+              <input
+                type="text"
+                value={cabinetName}
+                onChange={(event) => setCabinetName(event.target.value)}
+                placeholder="Nom du cabinet medical"
+                className="w-full p-3 bg-neutral-950 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm"
+              />
+            ) : null}
+          </>
+        ) : existingIdentity ? (
+          <div className="text-xs text-emerald-300 font-mono bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-3">
+            Wallet identifie: {existingIdentity.fullName} ({existingIdentity.nickname})
+          </div>
+        ) : null}
 
         <button
           type="button"
