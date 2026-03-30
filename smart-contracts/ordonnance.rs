@@ -1,56 +1,97 @@
-// Fichier : smart-contracts/ordonnance.rs
-// Rédigé par l'équipe : Yassir, Marouane, Ahmed et Matine
-// Description : Smart Contract principal pour la gestion du cycle de vie des ordonnances.
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatutOrdonnance {
-    Active,
-    Utilisee,
-    Annulee,
+    Prescribed,
+    Delivered,
+    Cancelled,
 }
 
-// Structure de base d'une ordonnance sur la Blockchain
-pub struct Ordonnance {
-    pub hash_id: String,
-    pub date_emission: u64, // Timestamp Unix
+#[derive(Debug, Clone)]
+pub struct OrdonnanceVersion {
+    pub id: String,
+    pub previous_id: Option<String>,
+    pub hash_data: String,
+    pub patient_wallet: String,
+    pub medecin_wallet: String,
+    pub pharmacie_wallet: Option<String>,
     pub statut: StatutOrdonnance,
-    pub hash_patient: String,
-    pub hash_medecin: String,
+    pub date_emission: u64,
+    pub version: u32,
 }
 
-impl Ordonnance {
-    /// Action Médecin : Le médecin crée (émet) une nouvelle ordonnance sur la blockchain.
-    /// Par défaut, son statut est défini sur "Active".
+impl OrdonnanceVersion {
     pub fn emettre_ordonnance(
-        hash_id: String,
-        hash_patient: String,
-        hash_medecin: String,
+        id: String,
+        hash_data: String,
+        patient_wallet: String,
+        medecin_wallet: String,
+        pharmacie_wallet: Option<String>,
         date_emission: u64,
     ) -> Self {
-        Ordonnance {
-            hash_id,
+        Self {
+            id,
+            previous_id: None,
+            hash_data,
+            patient_wallet,
+            medecin_wallet,
+            pharmacie_wallet,
+            statut: StatutOrdonnance::Prescribed,
             date_emission,
-            statut: StatutOrdonnance::Active, // Toujours Active à la création
-            hash_patient,
-            hash_medecin,
+            version: 1,
         }
     }
 
-    /// Action Pharmacie : Le pharmacien scanne l'ordonnance et valide la transaction.
-    /// Cette fonction vérifie si l'ordonnance n'a pas déjà été utilisée.
-    pub fn marquer_comme_utilisee(&mut self) -> Result<&str, &str> {
-        // [Garde-fou] On vérifie que le patient n'est pas en train d'essayer 
-        // de réutiliser une ordonnance déjà présentée à une autre pharmacie.
-        if self.statut == StatutOrdonnance::Utilisee {
-            return Err("FRAUDE DÉTECTÉE : L'ordonnance a déjà été utilisée.");
-        }
-        
-        if self.statut == StatutOrdonnance::Annulee {
-            return Err("ERREUR : L'ordonnance a été annulée par le médecin.");
+    pub fn reviser(
+        &self,
+        new_id: String,
+        new_hash_data: String,
+        date_emission: u64,
+    ) -> Result<Self, String> {
+        if self.statut == StatutOrdonnance::Delivered {
+            return Err("delivered prescription cannot be revised".into());
         }
 
-        // Si tout est bon, on change le statut pour bloquer les futures utilisations.
-        self.statut = StatutOrdonnance::Utilisee;
-        Ok("SUCCÈS : Ordonnance marquée comme délivrée. Prête pour remboursement.")
+        Ok(Self {
+            id: new_id,
+            previous_id: Some(self.id.clone()),
+            hash_data: new_hash_data,
+            patient_wallet: self.patient_wallet.clone(),
+            medecin_wallet: self.medecin_wallet.clone(),
+            pharmacie_wallet: self.pharmacie_wallet.clone(),
+            statut: StatutOrdonnance::Prescribed,
+            date_emission,
+            version: self.version + 1,
+        })
+    }
+
+    pub fn annuler(&mut self, caller_wallet: &str) -> Result<(), String> {
+        if self.medecin_wallet != caller_wallet {
+            return Err("only issuing doctor can cancel".into());
+        }
+
+        if self.statut == StatutOrdonnance::Delivered {
+            return Err("delivered prescription cannot be cancelled".into());
+        }
+
+        self.statut = StatutOrdonnance::Cancelled;
+        Ok(())
+    }
+
+    pub fn livrer(&mut self, caller_wallet: &str) -> Result<(), String> {
+        if self.statut == StatutOrdonnance::Cancelled {
+            return Err("cancelled prescription cannot be delivered".into());
+        }
+
+        if self.statut == StatutOrdonnance::Delivered {
+            return Err("prescription already delivered".into());
+        }
+
+        if let Some(pharmacie) = &self.pharmacie_wallet {
+            if pharmacie != caller_wallet {
+                return Err("pharmacy wallet is not authorized".into());
+            }
+        }
+
+        self.statut = StatutOrdonnance::Delivered;
+        Ok(())
     }
 }

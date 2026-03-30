@@ -16,19 +16,22 @@ Le projet est decoupe en trois couches :
 
 2) /backend
    - API REST Express + MongoDB.
-   - Stockage off-chain des evenements medicaux.
-   - Calcul d'empreintes SHA-256 sur payload canonique.
-   - Verification locale + stub d'ancrage on-chain.
+   - Wallet auth (nonce + signature + JWT 15min).
+   - Requetes sensibles signees (anti-replay nonce + timestamp).
+   - Chiffrement AES-256-GCM des donnees medicales.
+   - Prescriptions immuables versionnees (jamais de mise a jour directe).
+   - Verification d'integrite off-chain vs hash on-chain.
+   - RBAC, audit logs append-only, helmet, rate-limit.
 
 3) /smart-contracts
-   - Modeles Rust pour preuves medicales.
-   - Integration Substrate prevue (pallet proofs).
+   - Modeles Rust pour ancrage hash et controle d'acces.
+   - Fonctions: store_hash, verify_hash, grant_access, revoke_access, is_authorized, deliver_prescription.
 
 ## Concept cle
 
-- Off-chain : donnees medicales detaillees (DB privee).
-- On-chain : preuves d'evenements (hash + metadonnees minimales).
-- Verification : recalcul du hash depuis la DB puis comparaison avec la preuve ancree.
+- Off-chain : donnees medicales chiffrees + versionnees.
+- On-chain : hash + owner + wallets autorises + statut prescription.
+- Verification : lecture autorisee uniquement apres verification signature, droits chain, et hash chain.
 
 ## Lancer le backend (POC)
 
@@ -39,11 +42,14 @@ cp .env.example .env
 npm start
 ```
 
-## Endpoints principaux
+## Endpoints principaux (secure)
 
-- GET /health
-- GET /events/types
-- POST /events
-- GET /events/:id
-- POST /events/:id/verify
-- POST /events/:id/anchor
+- POST /auth/nonce
+- POST /auth/verify
+- GET /prescriptions
+- POST /prescriptions
+- GET /prescriptions/:recordId
+- POST /prescriptions/:recordId/revise
+- POST /prescriptions/:recordId/deliver
+- POST /prescriptions/:recordId/grant
+- POST /prescriptions/:recordId/revoke

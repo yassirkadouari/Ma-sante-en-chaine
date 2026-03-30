@@ -1,28 +1,90 @@
 ﻿"use client";
 
-import { useState } from "react";
-import { QrCode, ClipboardCheck, ShieldAlert, CheckCircle2, PlusCircle, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ClipboardCheck, ShieldAlert } from "lucide-react";
+import { apiRequest } from "@/lib/api";
+
+type PrescriptionSummary = {
+  recordId: string;
+  status: string;
+  patientWallet: string;
+  doctorWallet: string;
+  version: number;
+};
+
+type PrescriptionDetails = {
+  recordId: string;
+  status: string;
+  data: Record<string, unknown>;
+};
 
 export default function PharmacieDashboard() {
-  const [itemName, setItemName] = useState("");
-  const [itemPerDay, setItemPerDay] = useState("1");
-  const [items, setItems] = useState<Array<{ name: string; perDay: string }>>([]);
+  const [recordId, setRecordId] = useState("");
+  const [qrInput, setQrInput] = useState("");
+  const [details, setDetails] = useState<PrescriptionDetails | null>(null);
+  const [items, setItems] = useState<PrescriptionSummary[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const addItem = () => {
-    if (!itemName.trim()) {
-      return;
-    }
-
-    setItems((prev) => [
-      ...prev,
-      { name: itemName.trim(), perDay: itemPerDay.trim() || "1" }
-    ]);
-    setItemName("");
-    setItemPerDay("1");
+  const refresh = async () => {
+    const response = await apiRequest<{ items: PrescriptionSummary[] }>({ path: "/prescriptions" });
+    setItems(response.items);
   };
 
-  const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, idx) => idx !== index));
+  useEffect(() => {
+    refresh().catch((error) => setStatus(error.message));
+  }, []);
+
+  const useQrPayload = () => {
+    try {
+      const parsed = JSON.parse(qrInput || "{}");
+      const extracted = typeof parsed.recordId === "string" ? parsed.recordId : "";
+      if (!extracted) {
+        setStatus("Payload QR invalide: recordId introuvable");
+        return;
+      }
+      setRecordId(extracted);
+      setStatus("Record ID charge depuis QR payload.");
+    } catch {
+      setStatus("QR payload non valide (JSON attendu)");
+    }
+  };
+
+  const fetchDetails = async () => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      const response = await apiRequest<PrescriptionDetails>({
+        path: `/prescriptions/${recordId}`,
+        signed: true
+      });
+      setDetails(response);
+      setStatus("Prescription integrity verified from blockchain hash.");
+    } catch (error: any) {
+      setStatus(error.message);
+      setDetails(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deliver = async () => {
+    try {
+      setBusy(true);
+      setStatus(null);
+      const response = await apiRequest<{ status: string }>({
+        method: "POST",
+        path: `/prescriptions/${recordId}/deliver`,
+        signed: true,
+        body: {}
+      });
+      setStatus(`Prescription status updated on-chain: ${response.status}`);
+      await refresh();
+    } catch (error: any) {
+      setStatus(error.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -30,27 +92,39 @@ export default function PharmacieDashboard() {
       <div className="flex justify-between items-center bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">
         <div>
           <h1 className="text-2xl font-bold text-white">NOEUD_PHARMACIE</h1>
-          <p className="text-purple-500 text-sm">SYS: Pharmacie du Centre [WEB3_SYNC: TRUE]</p>
+          <p className="text-violet-500 text-sm">Prescription delivery requires signature + blockchain status transition.</p>
         </div>
-        <div className="px-4 py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold rounded flex items-center gap-2 text-sm">
-          <QrCode size={18} />
-          SCANNER_PRET
-        </div>
+        <div className="px-4 py-2 bg-violet-500/10 border border-violet-500/30 text-violet-400 font-bold rounded text-sm">SECURE_DISPENSE</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">
           <h2 className="font-bold text-xl mb-4 flex items-center gap-2 text-white">
-            <QrCode className="text-purple-500" /> SCAN_PATIENT
+            <ClipboardCheck className="text-violet-500" /> Verify Prescription
           </h2>
           <div className="flex gap-2 mb-4">
-            <input type="text" placeholder=">> SCAN..." className="flex-1 bg-neutral-950 p-3 border border-neutral-700 text-purple-400 rounded text-center focus:border-purple-500 outline-none" />
-            <button className="bg-purple-600/20 border border-purple-600 text-purple-400 px-4 py-3 rounded hover:bg-purple-600 hover:text-white transition font-bold">
-              EXECUTE
+            <input
+              value={recordId}
+              onChange={(event) => setRecordId(event.target.value)}
+              type="text"
+              placeholder=">> RECORD_ID"
+              className="flex-1 bg-neutral-950 p-3 border border-neutral-700 text-violet-400 rounded focus:border-violet-500 outline-none"
+            />
+            <button onClick={fetchDetails} disabled={busy || !recordId} className="bg-violet-600/20 border border-violet-600 text-violet-400 px-4 py-3 rounded hover:bg-violet-600 hover:text-white transition font-bold disabled:opacity-50">
+              VERIFY
             </button>
           </div>
-          <div className="border-4 border-dashed border-neutral-700 h-48 rounded-lg flex items-center justify-center text-neutral-500 bg-neutral-950">
-            [ POINT_CAMERA_HERE ]
+          <textarea
+            value={qrInput}
+            onChange={(event) => setQrInput(event.target.value)}
+            placeholder='Coller le payload QR JSON, ex: {"type":"MSC_ORDONNANCE","recordId":"..."}'
+            className="w-full min-h-28 mb-3 bg-neutral-950 p-3 border border-neutral-700 text-violet-300 rounded focus:border-violet-500 outline-none text-xs"
+          />
+          <button onClick={useQrPayload} disabled={!qrInput.trim()} className="mb-4 px-3 py-2 bg-violet-600/20 border border-violet-600 text-violet-300 rounded text-xs disabled:opacity-50">
+            USE_QR_PAYLOAD
+          </button>
+          <div className="border border-neutral-700 rounded-lg p-4 bg-neutral-950 text-xs text-neutral-400">
+            Le pharmacien peut scanner/coller le QR payload patient pour extraire automatiquement le recordId.
           </div>
         </div>
 
@@ -61,87 +135,45 @@ export default function PharmacieDashboard() {
             </h2>
             <div className="bg-neutral-950 p-4 border border-emerald-900/50 rounded-lg mb-4 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-neutral-500">HASH: 0x8F4...2A9C</span>
-                <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded font-bold">STATUT: ACTIVE</span>
+                <span className="text-xs text-neutral-500">ID: {details?.recordId || "-"}</span>
+                <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded font-bold">STATUT: {details?.status || "UNKNOWN"}</span>
               </div>
-              <p className="text-emerald-400 mb-6 flex items-center gap-1 text-xs"><CheckCircle2 size={14} /> AUTHENTIC (Dr. Bennis)</p>
+              <p className="text-emerald-400 mb-6 flex items-center gap-1 text-xs">AUTHENTICATED_PAYLOAD</p>
               
               <div className="bg-black p-3 rounded border border-neutral-800">
                 <p className="text-xs text-neutral-500 mb-2 border-b border-neutral-800 pb-2">DECRYPTED_PAYLOAD:</p>
-                <ul className="list-none text-sm space-y-2 text-neutral-300">
-                  <li>&gt; Doliprane 1000mg x 1</li>
-                  <li>&gt; Amoxicilline x 2</li>
-                </ul>
+                <pre className="text-xs text-neutral-300 overflow-auto">{JSON.stringify(details?.data || {}, null, 2)}</pre>
               </div>
             </div>
           </div>
-          <button className="w-full bg-emerald-600/20 border border-emerald-600 text-emerald-500 font-bold py-3 rounded hover:bg-emerald-600 hover:text-white transition text-sm flex justify-center items-center gap-2">
+          <button onClick={deliver} disabled={busy || !recordId} className="w-full bg-emerald-600/20 border border-emerald-600 text-emerald-500 font-bold py-3 rounded hover:bg-emerald-600 hover:text-white transition text-sm flex justify-center items-center gap-2 disabled:opacity-50">
             <ShieldAlert size={18} />
-            [ MUTATE_STATE: DELIVERED ] -&gt; NOTIFY_ASSURANCE
+            [ MUTATE_STATE: DELIVERED ]
           </button>
         </div>
       </div>
 
       <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800">
         <h2 className="font-bold text-xl mb-4 flex items-center gap-2 text-white">
-          <ClipboardCheck className="text-purple-400" /> CREER_ORDONNANCE (PHARMACIE)
+          <ClipboardCheck className="text-violet-400" /> Pharmacy Queue
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="MEDICAMENT"
-            value={itemName}
-            onChange={(event) => setItemName(event.target.value)}
-            className="bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded focus:border-purple-500 outline-none"
-          />
-          <input
-            type="text"
-            placeholder="CONSOMMATION/JOUR"
-            value={itemPerDay}
-            onChange={(event) => setItemPerDay(event.target.value)}
-            className="bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded focus:border-purple-500 outline-none"
-          />
-          <button
-            type="button"
-            onClick={addItem}
-            className="px-4 py-2 bg-purple-600/20 border border-purple-600 text-purple-400 font-bold rounded hover:bg-purple-600 hover:text-white transition flex items-center justify-center gap-2"
-          >
-            <PlusCircle size={18} /> ADD_ITEM
-          </button>
-        </div>
         <div className="bg-neutral-950 border border-neutral-800 rounded-lg p-4">
           {items.length === 0 ? (
-            <p className="text-xs text-neutral-500">Aucun medicament ajoute.</p>
+            <p className="text-xs text-neutral-500">No prescription assigned to this pharmacy wallet.</p>
           ) : (
             <ul className="space-y-2 text-sm text-neutral-300">
-              {items.map((item, index) => (
-                <li key={`${item.name}-${index}`} className="flex items-center justify-between border border-neutral-800 rounded px-3 py-2">
+              {items.map((item) => (
+                <li key={item.recordId} className="flex items-center justify-between border border-neutral-800 rounded px-3 py-2">
                   <span>
-                    {item.name} x {item.perDay} / jour
+                    {item.recordId} | v{item.version} | {item.patientWallet}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <span className="text-xs text-emerald-400">{item.status}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="px-4 py-2 bg-emerald-600/20 border border-emerald-600 text-emerald-500 font-bold rounded hover:bg-emerald-600 hover:text-white transition"
-          >
-            CREATE_ORDONNANCE
-          </button>
-          <p className="text-xs text-neutral-600 flex items-center">
-            POC: creation locale seulement, pas encore liee au backend.
-          </p>
-        </div>
+        {status ? <p className="mt-3 text-xs text-neutral-300">{status}</p> : null}
       </div>
     </div>
   );

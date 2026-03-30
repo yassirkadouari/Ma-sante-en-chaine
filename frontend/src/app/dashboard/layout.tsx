@@ -3,23 +3,23 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, TerminalSquare } from "lucide-react";
+import { clearSession, loadSession } from "@/lib/session";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const storedRole = localStorage.getItem("msc_role");
-    const roleFromPath = pathname?.split("/dashboard/")[1]?.split("/")[0];
+    const session = loadSession();
+    const roleFromPath = pathname?.split("/dashboard/")[1]?.split("/")[0]?.toUpperCase();
 
-    if (!storedRole || !roleFromPath || storedRole !== roleFromPath) {
+    if (!session?.token || !roleFromPath || session.role !== roleFromPath) {
       router.replace(`/login?role=${roleFromPath || "patient"}`);
     }
   }, [pathname, router]);
 
   const handleDisconnect = () => {
-    localStorage.removeItem("msc_role");
-    localStorage.removeItem("msc_wallet");
+    clearSession();
     router.push("/");
   };
 

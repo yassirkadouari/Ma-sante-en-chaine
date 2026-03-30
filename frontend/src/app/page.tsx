@@ -73,6 +73,16 @@ export default function Home() {
               </Link>
             </div>
           </div>
+
+          <div className="p-6 bg-neutral-950 border border-neutral-800 hover:border-red-500/50 rounded-xl flex flex-col justify-between transition-all group md:col-span-2">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">Admin Node</h2>
+              <p className="text-neutral-400 mb-6 text-sm font-mono">Gestion des roles wallet (ADMIN/PATIENT/MEDECIN/PHARMACIE/HOPITAL/LABO/ASSURANCE).</p>
+            </div>
+            <Link href="/login?role=admin" className="text-center px-4 py-3 bg-red-600/10 border border-red-600/30 text-red-400 font-mono font-bold rounded-lg hover:bg-red-600 hover:text-white transition w-full">
+              &gt; ADMIN_CONSOLE
+            </Link>
+          </div>
         </div>
 
         <div className="text-xs text-neutral-600 mt-8 border-t border-neutral-800 pt-8 flex flex-col md:flex-row justify-between items-center font-mono">

@@ -1,68 +1,86 @@
 ﻿"use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { LockKeyhole, Terminal } from "lucide-react";
-
-declare global {
-  interface Window {
-    injectedWeb3?: Record<string, any>;
-  }
-}
+import { connectWallet, signMessage } from "@/lib/wallet";
+import { saveSession } from "@/lib/session";
+import { apiRequest } from "@/lib/api";
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const role = searchParams.get("role") || "patient";
+  const role = useMemo(() => (searchParams.get("role") || "patient").toUpperCase(), [searchParams]);
   const [walletStatus, setWalletStatus] = useState<string>("idle");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const getRoleTheme = () => {
     switch (role) {
-      case "medecin": return "emerald";
-      case "pharmacie": return "purple";
-      case "hopital": return "sky";
-      case "assurance": return "amber";
+      case "ADMIN": return "red";
+      case "MEDECIN": return "emerald";
+      case "PHARMACIE": return "violet";
+      case "HOPITAL": return "sky";
+      case "ASSURANCE": return "amber";
       default: return "blue";
     }
   };
 
   const theme = getRoleTheme();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem("msc_role", role);
-    router.push(`/dashboard/${role}`);
-  };
-
-  const handleWalletConnect = async () => {
+  const handleLogin = async () => {
     try {
+      setError(null);
+      setLoading(true);
       setWalletStatus("connecting");
-      const injected = window.injectedWeb3?.["polkadot-js"];
 
-      if (!injected) {
-        setWalletStatus("missing");
-        return;
-      }
+      const { walletAddress: address } = await connectWallet();
+      setWalletAddress(address);
 
-      const extension = await injected.enable("Ma Sante en Chaine");
-      const accounts = await extension.accounts.get();
+      const noncePayload = await apiRequest<{
+        message: string;
+        nonce: string;
+      }>({
+        method: "POST",
+        path: "/auth/nonce",
+        auth: false,
+        body: {
+          walletAddress: address,
+          role
+        }
+      });
 
-      if (!accounts.length) {
-        setWalletStatus("no-accounts");
-        return;
-      }
+      const signature = await signMessage(address, noncePayload.message);
 
-      const address = accounts[0]?.address;
-      setWalletAddress(address || null);
+      const session = await apiRequest<{
+        token: string;
+        walletAddress: string;
+        role: string;
+      }>({
+        method: "POST",
+        path: "/auth/verify",
+        auth: false,
+        body: {
+          walletAddress: address,
+          role,
+          nonce: noncePayload.nonce,
+          signature
+        }
+      });
+
+      saveSession({
+        token: session.token,
+        walletAddress: session.walletAddress,
+        role: session.role
+      });
+
       setWalletStatus("connected");
-      if (address) {
-        localStorage.setItem("msc_wallet", address);
-      }
-      localStorage.setItem("msc_role", role);
-      router.push(`/dashboard/${role}`);
-    } catch (error) {
-      console.error(error);
+      router.push(`/dashboard/${role.toLowerCase()}`);
+    } catch (error: any) {
+      setError(error?.message || "Wallet authentication failed");
       setWalletStatus("error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,39 +94,35 @@ function LoginForm() {
       <h2 className="text-3xl font-bold mb-2 text-center text-white font-mono uppercase text-xl">
         &gt; AUTH_{role}
       </h2>
-      <p className="text-center text-neutral-500 mb-6 font-mono text-sm">Connexion wallet-only (POC) via extension Polkadot.js.</p>
+      <p className="text-center text-neutral-500 mb-6 font-mono text-sm">Wallet signature login with nonce + JWT session.</p>
 
-      <div className="mb-6 space-y-3">
+      <div className="space-y-5">
+        <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm">
+          ROLE: {role}
+        </div>
+
+        <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm break-all">
+          WALLET: {walletAddress || "Not connected"}
+        </div>
+
         <button
           type="button"
-          onClick={handleWalletConnect}
-          className={`w-full font-mono text-white font-bold py-3 rounded-lg transition bg-${theme}-600 hover:bg-${theme}-500 shadow-[0_0_15px_rgba(0,0,0,0.5)]`}
+          onClick={handleLogin}
+          disabled={loading}
+          className={`w-full font-mono text-white font-bold py-3 rounded-lg transition bg-${theme}-600 hover:bg-${theme}-500 shadow-[0_0_15px_rgba(0,0,0,0.5)] disabled:opacity-50`}
         >
-          [ CONNECT_WALLET ]
+          {loading ? "[ AUTHENTICATING... ]" : "[ SIGN_IN_WITH_WALLET ]"}
         </button>
+
         <div className="text-xs text-neutral-500 font-mono">
-          {walletStatus === "missing" && "Extension Polkadot.js introuvable."}
           {walletStatus === "connecting" && "Connexion en cours..."}
-          {walletStatus === "no-accounts" && "Aucun compte disponible."}
-          {walletStatus === "error" && "Erreur de connexion au wallet."}
+          {walletStatus === "error" && "Erreur de connexion au wallet ou signature invalide."}
           {walletStatus === "connected" && `Wallet connecte: ${walletAddress}`}
           {walletStatus === "idle" && ""}
         </div>
+
+        {error ? <p className="text-red-400 text-xs font-mono">{error}</p> : null}
       </div>
-      
-      <form onSubmit={handleLogin} className="space-y-5">
-        <div>
-          <label className="block text-xs font-mono text-neutral-400 mb-2">&gt; NODE_IDENTIFIER</label>
-          <input type="text" placeholder="id@sys.node" className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg focus:outline-none focus:border-neutral-500 font-mono text-sm" required />
-        </div>
-        <div>
-          <label className="block text-xs font-mono text-neutral-400 mb-2">&gt; PRIVATE_KEY</label>
-          <input type="password" placeholder="****************" className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg focus:outline-none focus:border-neutral-500 font-mono" required />
-        </div>
-        <button type="submit" className={`w-full font-mono text-white font-bold py-3 mt-6 rounded-lg transition bg-${theme}-600 hover:bg-${theme}-500 shadow-[0_0_15px_rgba(0,0,0,0.5)]`}>
-          [ EXECUTE_LOGIN ]
-        </button>
-      </form>
     </div>
   );
 }
