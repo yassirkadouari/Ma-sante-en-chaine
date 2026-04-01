@@ -2,8 +2,8 @@ const WalletIdentity = require("../models/WalletIdentity");
 const { ROLES, normalizeRole } = require("../config/roles");
 const { normalizeWallet } = require("../utils/signature");
 
-const detailsManagedRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE, ROLES.MEDECIN]);
-const employmentApprovalRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE]);
+const detailsManagedRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE, ROLES.MEDECIN, ROLES.LABO]);
+const employmentApprovalRoles = new Set([ROLES.HOPITAL, ROLES.ASSURANCE, ROLES.PHARMACIE, ROLES.LABO]);
 const PENDING_PROFILE_MARKER = "PENDING_PROFILE";
 
 function normalizeOptional(value) {
@@ -72,6 +72,7 @@ function normalizeProfileInput(profileInput, role) {
   }
 
   const dateOfBirth = normalizeDateOfBirth(dateOfBirthRaw);
+  const region = normalizeOptional(profileInput.region);
 
   if (normalizedRole === ROLES.MEDECIN && !cabinetName) {
     throw Object.assign(new Error("Missing cabinetName"), {
@@ -85,7 +86,8 @@ function normalizeProfileInput(profileInput, role) {
     fullName,
     nickname,
     dateOfBirth,
-    cabinetName
+    cabinetName,
+    region
   };
 }
 
@@ -94,7 +96,7 @@ function normalizeRoleDetailsInput(role, institutionName, departmentName) {
   if (!detailsManagedRoles.has(normalizedRole)) {
     throw Object.assign(new Error("Unsupported role for details mapping"), {
       status: 400,
-      publicMessage: "Details can only be set for HOPITAL, ASSURANCE, PHARMACIE, MEDECIN"
+      publicMessage: "Details can only be set for HOPITAL, ASSURANCE, PHARMACIE, MEDECIN, LABO"
     });
   }
 
@@ -127,16 +129,21 @@ function toPublicIdentity(doc) {
     return null;
   }
 
+  const { env } = require("../config/env");
+  const isGlobal = doc.isGlobalAdmin || env.adminWallets.map(normalizeWallet).includes(normalizeWallet(doc.walletAddress));
+
   return {
     walletAddress: doc.walletAddress,
     role: doc.role,
     fullName: doc.fullName,
     nickname: doc.nickname,
     dateOfBirth: doc.dateOfBirth.toISOString().slice(0, 10),
+    region: doc.region || null,
+    isGlobalAdmin: isGlobal,
     cabinetName: doc.cabinetName || null,
     institutionName: doc.institutionName || null,
     departmentName: doc.departmentName || null,
-    doctorApprovalStatus: doc.doctorApprovalStatus || "APPROVED",
+    approvalStatus: doc.approvalStatus || "PENDING",
     approvedByWallet: doc.approvedByWallet || null,
     approvedAt: doc.approvedAt || null,
     createdAt: doc.createdAt,
@@ -175,10 +182,34 @@ function isUserProfileComplete(identity) {
 async function getWalletIdentity(walletAddress) {
   const wallet = normalizeWallet(walletAddress);
   const doc = await WalletIdentity.findOne({ walletAddress: wallet }).lean();
+  
+  if (!doc) {
+    // Check if wallet has an assigned role in the DB or via env config
+    const WalletRole = require("../models/WalletRole");
+    const { env } = require("../config/env");
+    
+    const dbRoles = await WalletRole.find({ walletAddress: wallet }).lean();
+    const isBootstrappedAdmin = env.adminWallets.map(normalizeWallet).includes(wallet);
+    
+    if (dbRoles.length > 0 || isBootstrappedAdmin) {
+        const primaryRole = isBootstrappedAdmin ? ROLES.ADMIN : dbRoles[0].role;
+        return {
+            walletAddress: wallet,
+            role: primaryRole,
+            fullName: "Utilisateur Autorisé",
+            nickname: "User",
+            dateOfBirth: "1970-01-01",
+            isGlobalAdmin: isBootstrappedAdmin || dbRoles.some(r => r.role === ROLES.ADMIN),
+            approvalStatus: "APPROVED", // Already approved by role assignment
+            isPlaceholder: true
+        };
+    }
+  }
+
   return toPublicIdentity(doc);
 }
 
-async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWallet }) {
+async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWallet, institutionName, departmentName }) {
   const wallet = normalizeWallet(walletAddress);
   const existing = await WalletIdentity.findOne({ walletAddress: wallet });
 
@@ -188,8 +219,8 @@ async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWa
 
     if (existing.role !== normalizedRole) {
       existing.role = normalizedRole;
-      if (normalizedRole === ROLES.MEDECIN && !existing.doctorApprovalStatus) {
-        existing.doctorApprovalStatus = "PENDING";
+      if (!existing.approvalStatus) {
+        existing.approvalStatus = "PENDING";
       }
       mustSave = true;
     }
@@ -200,6 +231,7 @@ async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWa
       existing.nickname = normalizedProfile.nickname;
       existing.dateOfBirth = normalizedProfile.dateOfBirth;
       existing.cabinetName = normalizedProfile.cabinetName;
+      existing.region = normalizedProfile.region;
       existing.updatedByWallet = normalizeWallet(actorWallet || walletAddress);
       mustSave = true;
     }
@@ -211,14 +243,42 @@ async function ensureWalletIdentity({ walletAddress, role, profileInput, actorWa
     return { identity: toPublicIdentity(existing), created: false };
   }
 
+  // If no DB record exists, check if this wallet is pre-authorized
+  const WalletRole = require("../models/WalletRole");
+  const { env } = require("../config/env");
+  const isBootstrappedAdmin = env.adminWallets.map(normalizeWallet).includes(wallet);
+  const dbRoles = await WalletRole.find({ walletAddress: wallet }).lean();
+
+  if (!profileInput && (isBootstrappedAdmin || dbRoles.length > 0)) {
+    // Create skeletal identity for pre-authorized users
+    const primaryRole = isBootstrappedAdmin ? ROLES.ADMIN : dbRoles[0].role;
+    const actor = normalizeWallet(actorWallet || walletAddress);
+    
+    const created = await WalletIdentity.create({
+      walletAddress: wallet,
+      role: primaryRole,
+      fullName: PENDING_PROFILE_MARKER,
+      nickname: PENDING_PROFILE_MARKER,
+      dateOfBirth: new Date("1970-01-01"),
+      approvalStatus: "APPROVED",
+      isGlobalAdmin: isBootstrappedAdmin || dbRoles.some(r => r.role === ROLES.ADMIN),
+      createdByWallet: actor,
+      updatedByWallet: actor,
+      institutionName: normalizeOptional(institutionName),
+      departmentName: normalizeOptional(departmentName)
+    });
+    
+    return { identity: toPublicIdentity(created), created: true };
+  }
+
+  // Standard path for new users (e.g. Patients) who MUST provide a profile
   const normalizedProfile = normalizeProfileInput(profileInput, role);
   const actor = normalizeWallet(actorWallet || walletAddress);
-  const isDoctor = normalizedProfile.role === ROLES.MEDECIN;
 
   const created = await WalletIdentity.create({
     walletAddress: wallet,
     ...normalizedProfile,
-    doctorApprovalStatus: isDoctor ? "PENDING" : "APPROVED",
+    approvalStatus: (role === ROLES.PATIENT || actor !== wallet) ? "APPROVED" : "PENDING",
     createdByWallet: actor,
     updatedByWallet: actor
   });
@@ -230,16 +290,13 @@ async function upsertWalletIdentity({ walletAddress, role, profileInput, actorWa
   const wallet = normalizeWallet(walletAddress);
   const normalizedProfile = normalizeProfileInput(profileInput, role);
   const actor = normalizeWallet(actorWallet || walletAddress);
-  const isDoctor = normalizedProfile.role === ROLES.MEDECIN;
 
   const doc = await WalletIdentity.findOneAndUpdate(
     { walletAddress: wallet },
     {
       $set: {
         ...normalizedProfile,
-        doctorApprovalStatus: isDoctor ? "PENDING" : "APPROVED",
-        approvedByWallet: isDoctor ? undefined : actor,
-        approvedAt: isDoctor ? undefined : new Date(),
+        approvalStatus: "PENDING",
         updatedByWallet: actor
       },
       $setOnInsert: {
@@ -284,7 +341,7 @@ async function setRoleDetailsByAdmin({ walletAddress, role, institutionName, dep
   return toPublicIdentity(existing);
 }
 
-async function setDoctorApprovalByAdmin({ walletAddress, approved, actorWallet }) {
+async function setUserApprovalByAdmin({ walletAddress, approved, actorWallet }) {
   const wallet = normalizeWallet(walletAddress);
   const actor = normalizeWallet(actorWallet || walletAddress);
   const status = approved ? "APPROVED" : "REJECTED";
@@ -298,14 +355,19 @@ async function setDoctorApprovalByAdmin({ walletAddress, approved, actorWallet }
     });
   }
 
-  if (doc.role !== ROLES.MEDECIN) {
-    throw Object.assign(new Error("Not a medecin role"), {
-      status: 400,
-      publicMessage: "Doctor approval is only available for MEDECIN"
+  const adminIdentity = await WalletIdentity.findOne({ walletAddress: actor });
+  if (!adminIdentity || (!adminIdentity.isGlobalAdmin && adminIdentity.role !== ROLES.SUB_ADMIN)) {
+     throw Object.assign(new Error("Unauthorized"), { status: 403 });
+  }
+
+  if (adminIdentity.role === ROLES.SUB_ADMIN && adminIdentity.region !== doc.region) {
+    throw Object.assign(new Error("Permission denied: user is in a different region"), {
+      status: 403,
+      publicMessage: "Vous ne pouvez approuver que les utilisateurs de votre région."
     });
   }
 
-  doc.doctorApprovalStatus = status;
+  doc.approvalStatus = status;
   doc.approvedByWallet = actor;
   doc.approvedAt = new Date();
   doc.updatedByWallet = actor;
@@ -320,18 +382,20 @@ function canAccessRole(identity, role) {
     return { allowed: false, reason: "Identity profile missing" };
   }
 
-  if (identity.role !== normalizedRole) {
+  // ADMIN/SUB_ADMIN roles and validated Global Admins bypass approval checks
+  if (normalizedRole === ROLES.ADMIN || normalizedRole === ROLES.SUB_ADMIN || identity.isGlobalAdmin) {
     return { allowed: true };
   }
 
-  if (normalizedRole === ROLES.MEDECIN && identity.doctorApprovalStatus !== "APPROVED") {
-    return { allowed: false, reason: "Compte medecin en attente de validation administrateur" };
+  // Admin approval required for all roles except PATIENT
+  if (normalizedRole !== ROLES.PATIENT && identity.approvalStatus !== "APPROVED") {
+    return { allowed: false, reason: "Votre compte est en attente de validation par un administrateur." };
   }
 
   if (employmentApprovalRoles.has(normalizedRole)) {
     if (!identity.institutionName || !identity.departmentName) {
       return {
-        allowed: false,
+        allowed: true,
         reason: "Compte en attente: l'administrateur doit renseigner institut et departement"
       };
     }
@@ -345,7 +409,7 @@ module.exports = {
   ensureWalletIdentity,
   upsertWalletIdentity,
   setRoleDetailsByAdmin,
-  setDoctorApprovalByAdmin,
+  setUserApprovalByAdmin,
   isUserProfileComplete,
   canAccessRole,
   toPublicIdentity

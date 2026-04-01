@@ -8,6 +8,10 @@ const prescriptionRoutes = require("./routes/prescriptions");
 const adminRoutes = require("./routes/admin");
 const claimsRoutes = require("./routes/claims");
 const medicalEventsRoutes = require("./routes/medicalEventsSecure");
+const documentRoutes = require("./routes/documents");
+const laboRoutes = require("./routes/labo");
+const hopitalRoutes = require("./routes/hopital");
+const recordRoutes = require("./routes/records");
 const { attachRequestContext } = require("./middleware/requestContext");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 const { env } = require("./config/env");
@@ -39,6 +43,10 @@ function createApp() {
   app.use("/admin", adminRoutes);
   app.use("/claims", claimsRoutes);
   app.use("/medical-events", medicalEventsRoutes);
+  app.use("/documents", documentRoutes);
+  app.use("/labo", laboRoutes);
+  app.use("/hopital", hopitalRoutes);
+  app.use("/records", recordRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

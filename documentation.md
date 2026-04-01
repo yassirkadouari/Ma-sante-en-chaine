@@ -865,3 +865,52 @@ Before handing off to your friend:
   - smart-contracts/ordonnance.rs
 3. Confirm current backend branch starts and tests pass in mock mode.
 4. Agree on adapter interface freeze (section 19.2) before coding chain internals.
+
+## 20. Regional Governance and Automated Lifecycle Overhaul (March 2026)
+
+This section documents the major structural overhaul implemented to support regional governance and full prescription lifecycle automation.
+
+### 20.1 Regional Administrative Hierarchy
+
+A new tiered administrative model has been introduced:
+- **Global Admin**: Full access to the entire platform, including global user management and oversight.
+- **Sub-Admin (Regional)**: Scoped to a specific Moroccan region (e.g., Casablanca-Settat). They can only manage and approve users within their assigned geographical territory.
+- **Region Tracking**: `region` field added to `WalletIdentity` to enforce geographical scoping for Sub-Admins.
+
+### 20.2 Unified Approval Workflow
+
+All professional roles (MEDECIN, PHARMACIE, HOPITAL, ASSURANCE) now follow a strict approval lifecycle:
+1.  **Registration**: User connects wallet and fills identity profile.
+2.  **Pending State**: Status is set to `PENDING`. Access to dashboards is blocked.
+3.  **Admin Review**: A Global or Regional Admin reviews the credentials.
+4.  **Activation**: Status changed to `APPROVED`, granting full dashboard access.
+
+### 20.3 PDF Prescription & Blockchain Anchoring
+
+The prescription flow has been digitized using file-based security:
+- **Doctor Issuance**: Doctors upload a signed PDF. The backend generates a SHA-256 hash of the file.
+- **Anchoring**: The hash is stored as a `BlockchainAnchor` (simulated in Mongo) with a `PRESCRIBED` status.
+- **Patient Access**: Patients can download the PDF and present a secure QR code containing the `recordId`.
+- **Pharmacist Validation**: Pharmacists scan the QR, verify the anchor, and trigger a `DELIVERED` (USED) transition, which invalidates the prescription for future use.
+
+### 20.4 Automated Reimbursement & Bank Simulation
+
+The Insurance (Assurance) module now supports automated payout flows:
+- **Claim Auditing**: Insurance agents audit claims against blockchain-anchored medical events or delivered prescriptions.
+- **Bank Transfer Simulation**: Approved claims can be "Reimbursed". This triggers a simulation that generates a unique `paymentReference`, representing a bank transfer (Virement Bancaire) to the patient.
+- **Traceability**: All payments are recorded with status `REIMBURSED` and a link to the original medical source.
+
+### 20.5 Patient-Doctor Relationship (Relinking)
+
+- **Primary Doctor**: Patients are now linked to a `primaryDoctorWallet`.
+- **Relinking Feature**: Patients can update their primary physician at any time via the `PATCH /auth/relink-doctor` endpoint, allowing for seamless transfers between medical professionals.
+
+### 20.6 Dashboard Overhaul Summary
+
+- **Admin**: Regional filtering and one-click user approvals.
+- **Doctor**: "New Medical Visit" UI with PDF prescription anchoring.
+- **Patient**: Full timeline view of medical history with "Change Doctor" utility.
+- **Pharmacist**: Dedicated "Validation Terminal" for QR scanning and prescription deactivation.
+- **Insurance**: "Claims Engine" with bank transfer simulation and decision logging.
+
+All UI components have been upgraded to a premium dark-themed aesthetic with modern Glassmorphism effects.

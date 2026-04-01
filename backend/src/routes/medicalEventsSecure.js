@@ -281,11 +281,13 @@ router.post("/operation", requireRole([ROLES.HOPITAL]), requireSignedRequest, as
 router.get("/mine", requireRole([ROLES.PATIENT]), async (req, res, next) => {
   try {
     const patientWallet = normalizeWallet(req.auth.walletAddress);
+    const [events, records, identity] = await Promise.all([
+      MedicalEvent.find({ patientId: patientWallet }).sort({ occurredAt: -1 }).lean(),
+      PrescriptionRecord.find({ patientWallet }).sort({ createdAt: -1 }).lean(),
+      require("../models/WalletIdentity").findOne({ walletAddress: patientWallet }).lean()
+    ]);
 
-    const events = await MedicalEvent.find({ patientId: patientWallet }).sort({ occurredAt: -1 }).lean();
     const latestProfileEvent = events.find((item) => item.eventType === "PATIENT_PROFILE");
-
-    const records = await PrescriptionRecord.find({ patientWallet }).sort({ createdAt: -1 }).lean();
 
     const medications = [];
     for (const record of records) {
@@ -309,7 +311,17 @@ router.get("/mine", requireRole([ROLES.PATIENT]), async (req, res, next) => {
     }
 
     const pastOperations = events
-      .filter((item) => item.eventType === "INTERVENTION" || item.eventType === "HOSPITALISATION")
+      .filter((item) => ["INTERVENTION", "HOSPITALISATION", "OPERATION", "ADMISSION", "DISCHARGE"].includes(item.eventType))
+      .map((item) => ({
+        eventId: item._id,
+        occurredAt: item.occurredAt,
+        data: item.eventData,
+        eventType: item.eventType,
+        actorWallet: item.actorId
+      }));
+
+    const labResults = events
+      .filter((item) => item.eventType === "LAB_RESULT")
       .map((item) => ({
         eventId: item._id,
         occurredAt: item.occurredAt,
@@ -344,15 +356,16 @@ router.get("/mine", requireRole([ROLES.PATIENT]), async (req, res, next) => {
     );
 
     res.json({
-      profile: latestProfileEvent
-        ? {
-            bloodType: latestProfileEvent.eventData?.bloodType || null,
-            age: latestProfileEvent.eventData?.age || null,
-            diseases: latestProfileEvent.eventData?.diseases || []
-          }
-        : null,
+      profile: {
+        bloodType: latestProfileEvent?.eventData?.bloodType || null,
+        age: latestProfileEvent?.eventData?.age || null,
+        diseases: latestProfileEvent?.eventData?.diseases || [],
+        region: identity?.region || null,
+        primaryDoctorWallet: identity?.primaryDoctorWallet || null
+      },
       events: verifiedEvents,
       visits,
+      labResults,
       pastOperations,
       currentMedications: medications
     });

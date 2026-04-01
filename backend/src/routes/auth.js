@@ -199,4 +199,83 @@ router.get("/me", requireAuth, async (req, res, next) => {
   }
 });
 
+const registerSchema = z.object({
+  walletAddress: z.string().min(10),
+  role: z.string().min(2),
+  region: z.string().min(2),
+  profile: z.object({
+    fullName: z.string().min(2),
+    nickname: z.string().min(2),
+    dateOfBirth: z.string().min(4),
+    cabinetName: z.string().optional(),
+    institutionName: z.string().optional(),
+    departmentName: z.string().optional()
+  })
+});
+
+router.post("/register", async (req, res, next) => {
+  try {
+    const parsed = registerSchema.parse(req.body || {});
+    const walletAddress = normalizeWallet(parsed.walletAddress);
+    const role = normalizeRole(parsed.role);
+
+    // 1. Check if identity already exists and is complete
+    const existingIdentity = await identityService.getWalletIdentity(walletAddress);
+    if (existingIdentity && identityService.isUserProfileComplete(existingIdentity)) {
+      return res.status(409).json({ error: "Identity already exists and is complete for this wallet" });
+    }
+
+    // 2. Create identity with PENDING status and region
+    const { identity } = await identityService.ensureWalletIdentity({
+      walletAddress,
+      role,
+      profileInput: {
+        ...parsed.profile,
+        region: parsed.region
+      },
+      actorWallet: walletAddress
+    });
+
+    // 3. Assign the requested role
+    await roleService.assignRole({
+      walletAddress,
+      role,
+      actorWallet: walletAddress
+    });
+
+    res.status(201).json({
+      message: "Registration request submitted. Waiting for admin approval.",
+      identity
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const relinkSchema = z.object({
+  doctorWallet: z.string().min(10)
+});
+
+router.patch("/relink-doctor", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = relinkSchema.parse(req.body || {});
+    const doctorWallet = normalizeWallet(parsed.doctorWallet);
+
+    const identity = await identityService.getWalletIdentity(req.auth.walletAddress);
+    if (!identity) {
+      return res.status(404).json({ error: "Identity not found" });
+    }
+
+    identity.primaryDoctorWallet = doctorWallet;
+    await identity.save();
+
+    res.json({
+      message: "Primary doctor updated successfully",
+      primaryDoctorWallet: doctorWallet
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

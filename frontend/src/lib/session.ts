@@ -7,10 +7,12 @@ export type Session = {
     fullName: string;
     nickname: string;
     dateOfBirth: string;
+    region?: string | null;
+    isGlobalAdmin?: boolean;
     cabinetName?: string | null;
     institutionName?: string | null;
     departmentName?: string | null;
-    doctorApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED";
+    approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
     approvedByWallet?: string | null;
     approvedAt?: string | null;
   } | null;

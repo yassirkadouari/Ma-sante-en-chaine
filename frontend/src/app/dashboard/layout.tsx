@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { useState } from "react";
@@ -15,7 +15,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const session = loadSession();
     const roleFromPath = pathname?.split("/dashboard/")[1]?.split("/")[0]?.toUpperCase();
 
-    if (!session?.token || !roleFromPath || session.role !== roleFromPath) {
+    const isAuthorized = session?.role === roleFromPath || (session?.role === "SUB_ADMIN" && roleFromPath === "ADMIN");
+
+    if (!session?.token || !roleFromPath || !isAuthorized) {
       router.replace("/login");
       return;
     }

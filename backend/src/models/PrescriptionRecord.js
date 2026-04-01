@@ -34,7 +34,17 @@ const PrescriptionRecordSchema = new mongoose.Schema(
     hashVersion: { type: String, required: true, default: "v2" },
     encryptedData: { type: EncryptedPayloadSchema, required: true },
     signedRequest: { type: SignatureSchema, required: true },
-    issuedAt: { type: Date, required: true, default: () => new Date() }
+    issuedAt: { type: Date, required: true, default: () => new Date() },
+    pdfPath: { type: String }, // Path to the uploaded PDF prescription
+    blockchainHash: { type: String, index: true }, // The hash stored on the blockchain
+    status: {
+      type: String,
+      enum: ["ACTIVE", "USED", "EXPIRED"],
+      default: "ACTIVE"
+    },
+    isPurchased: { type: Boolean, default: false },
+    isDelivered: { type: Boolean, default: false },
+    totalAmount: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

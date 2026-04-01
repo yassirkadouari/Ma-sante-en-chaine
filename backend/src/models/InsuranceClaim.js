@@ -14,7 +14,7 @@ const ClaimVerificationSchema = new mongoose.Schema(
 const InsuranceClaimSchema = new mongoose.Schema(
   {
     claimId: { type: String, required: true, unique: true, index: true },
-    sourceType: { type: String, enum: ["PRESCRIPTION", "VISIT", "OPERATION"], required: true, index: true },
+    sourceType: { type: String, enum: ["PRESCRIPTION", "VISIT", "OPERATION", "LAB_TEST", "HOSPITAL_STAY"], required: true, index: true },
     sourceId: { type: String, required: true, index: true },
     patientWallet: { type: String, required: true, index: true },
     requesterWallet: { type: String, required: true },
@@ -22,7 +22,9 @@ const InsuranceClaimSchema = new mongoose.Schema(
     providerRole: { type: String },
     amountRequested: { type: Number, required: true, min: 0 },
     amountApproved: { type: Number, min: 0 },
-    status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING", index: true },
+    status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED", "REIMBURSED"], default: "PENDING", index: true },
+    paymentReference: { type: String }, // Bank transfer reference
+    paidAt: { type: Date },
     reason: { type: String },
     verification: { type: ClaimVerificationSchema, default: () => ({}) },
     reviewedByWallet: { type: String },

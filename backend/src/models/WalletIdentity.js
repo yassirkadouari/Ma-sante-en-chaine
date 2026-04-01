@@ -7,13 +7,16 @@ const WalletIdentitySchema = new mongoose.Schema(
     fullName: { type: String, required: true, trim: true },
     nickname: { type: String, required: true, trim: true },
     dateOfBirth: { type: Date, required: true },
+    region: { type: String, index: true }, // From REGIONS config
+    isGlobalAdmin: { type: Boolean, default: false },
     cabinetName: { type: String, trim: true },
     institutionName: { type: String, trim: true },
     departmentName: { type: String, trim: true },
-    doctorApprovalStatus: {
+    primaryDoctorWallet: { type: String, index: true },
+    approvalStatus: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
-      default: "APPROVED"
+      default: "PENDING"
     },
     approvedByWallet: { type: String },
     approvedAt: { type: Date },

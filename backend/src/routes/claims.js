@@ -53,8 +53,26 @@ router.get("/", async (req, res, next) => {
     const role = req.auth.role;
 
     if (role === ROLES.PATIENT) {
-      const items = await InsuranceClaim.find({ patientWallet: wallet }).sort({ createdAt: -1 }).lean();
-      return res.json({ items });
+      const claims = await InsuranceClaim.find({ patientWallet: wallet }).sort({ createdAt: -1 }).lean();
+      
+      // Enrich claims with source info for the patient to understand what they are
+      const enriched = await Promise.all(claims.map(async (claim) => {
+        let sourceInfo = null;
+        if (claim.sourceType === "PRESCRIPTION") {
+          const presc = await PrescriptionRecord.findOne({ recordId: claim.sourceId }).lean();
+          sourceInfo = presc ? { date: presc.issuedAt, label: `Ordonnance ${presc.recordId.slice(0,8)}` } : null;
+        } else if (["LAB_TEST", "HOSPITAL_STAY", "VISIT", "OPERATION"].includes(claim.sourceType)) {
+          const event = await MedicalEvent.findById(claim.sourceId).lean();
+          sourceInfo = event ? { 
+            date: event.occurredAt, 
+            label: event.eventType,
+            institution: event.eventData?.institutionName || event.actorId.slice(0,10)
+          } : null;
+        }
+        return { ...claim, sourceInfo };
+      }));
+
+      return res.json({ items: enriched });
     }
 
     if (role === ROLES.ASSURANCE) {
@@ -217,6 +235,52 @@ router.patch(
       });
 
       res.json(claim);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/:claimId/reimburse",
+  requireRole([ROLES.ASSURANCE]),
+  requireSignedRequest,
+  async (req, res, next) => {
+    try {
+      const claim = await InsuranceClaim.findOne({ claimId: req.params.claimId });
+      if (!claim) {
+        return res.status(404).json({ error: "Claim not found" });
+      }
+
+      if (claim.status !== "APPROVED") {
+        return res.status(400).json({ error: "Claim must be APPROVED before reimbursement" });
+      }
+
+      const paymentReference = "TRF-" + crypto.randomBytes(8).toString("hex").toUpperCase();
+      
+      claim.status = "REIMBURSED";
+      claim.paymentReference = paymentReference;
+      claim.paidAt = new Date();
+      await claim.save();
+
+      await logAudit({
+        action: "CLAIM_REIMBURSED",
+        actorWallet: req.auth.walletAddress,
+        actorRole: req.auth.role,
+        requestId: req.requestId,
+        ip: req.ip,
+        metadata: {
+          claimId: claim.claimId,
+          paymentReference
+        }
+      });
+
+      res.json({
+        claimId: claim.claimId,
+        status: "REIMBURSED",
+        paymentReference,
+        paidAt: claim.paidAt
+      });
     } catch (error) {
       next(error);
     }
