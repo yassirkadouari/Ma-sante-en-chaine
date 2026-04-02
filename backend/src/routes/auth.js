@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const express = require("express");
 const { z } = require("zod");
 const AuthNonce = require("../models/AuthNonce");
+const WalletIdentity = require("../models/WalletIdentity");
 const { env } = require("../config/env");
 const { normalizeRole, ROLES } = require("../config/roles");
 const { normalizeWallet, verifyWalletMessage } = require("../utils/signature");
@@ -261,7 +262,10 @@ router.patch("/relink-doctor", requireAuth, async (req, res, next) => {
     const parsed = relinkSchema.parse(req.body || {});
     const doctorWallet = normalizeWallet(parsed.doctorWallet);
 
-    const identity = await identityService.getWalletIdentity(req.auth.walletAddress);
+    const identity = await WalletIdentity.findOne({
+      walletAddress: normalizeWallet(req.auth.walletAddress)
+    });
+
     if (!identity) {
       return res.status(404).json({ error: "Identity not found" });
     }

@@ -7,6 +7,7 @@ test("denies medecin when doctor approval is pending", () => {
   const result = canAccessRole(
     {
       role: "MEDECIN",
+      approvalStatus: "APPROVED",
       doctorApprovalStatus: "PENDING"
     },
     "MEDECIN"
@@ -20,6 +21,7 @@ test("allows approved medecin", () => {
   const result = canAccessRole(
     {
       role: "MEDECIN",
+      approvalStatus: "APPROVED",
       doctorApprovalStatus: "APPROVED"
     },
     "MEDECIN"
@@ -32,6 +34,7 @@ test("denies assurance without institution/department", () => {
   const result = canAccessRole(
     {
       role: "ASSURANCE",
+      approvalStatus: "APPROVED",
       institutionName: null,
       departmentName: null
     },
@@ -46,6 +49,7 @@ test("allows assurance with institution/department", () => {
   const result = canAccessRole(
     {
       role: "ASSURANCE",
+      approvalStatus: "APPROVED",
       institutionName: "CNSS",
       departmentName: "Remboursements"
     },

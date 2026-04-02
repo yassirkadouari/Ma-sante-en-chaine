@@ -356,11 +356,22 @@ async function setUserApprovalByAdmin({ walletAddress, approved, actorWallet }) 
   }
 
   const adminIdentity = await WalletIdentity.findOne({ walletAddress: actor });
-  if (!adminIdentity || (!adminIdentity.isGlobalAdmin && adminIdentity.role !== ROLES.SUB_ADMIN)) {
-     throw Object.assign(new Error("Unauthorized"), { status: 403 });
+  const { env } = require("../config/env");
+  const isBootstrappedGlobalAdmin = env.adminWallets
+    .map(normalizeWallet)
+    .includes(actor);
+
+  const canApproveAsGlobalAdmin =
+    isBootstrappedGlobalAdmin ||
+    (adminIdentity && (adminIdentity.isGlobalAdmin || adminIdentity.role === ROLES.ADMIN));
+
+  const canApproveAsRegionalAdmin = adminIdentity && adminIdentity.role === ROLES.SUB_ADMIN;
+
+  if (!canApproveAsGlobalAdmin && !canApproveAsRegionalAdmin) {
+    throw Object.assign(new Error("Unauthorized"), { status: 403 });
   }
 
-  if (adminIdentity.role === ROLES.SUB_ADMIN && adminIdentity.region !== doc.region) {
+  if (canApproveAsRegionalAdmin && adminIdentity.region !== doc.region) {
     throw Object.assign(new Error("Permission denied: user is in a different region"), {
       status: 403,
       publicMessage: "Vous ne pouvez approuver que les utilisateurs de votre région."
@@ -392,10 +403,14 @@ function canAccessRole(identity, role) {
     return { allowed: false, reason: "Votre compte est en attente de validation par un administrateur." };
   }
 
+  if (normalizedRole === ROLES.MEDECIN && identity.doctorApprovalStatus && identity.doctorApprovalStatus !== "APPROVED") {
+    return { allowed: false, reason: "Compte medecin en attente de validation administrateur" };
+  }
+
   if (employmentApprovalRoles.has(normalizedRole)) {
     if (!identity.institutionName || !identity.departmentName) {
       return {
-        allowed: true,
+        allowed: false,
         reason: "Compte en attente: l'administrateur doit renseigner institut et departement"
       };
     }

@@ -188,7 +188,15 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
   if (options.auth !== false) {
     const session = loadSession();
     if (!session?.token) {
-      throw new Error("Missing session token");
+      const error = new Error("Session absente ou expirée. Merci de vous reconnecter.");
+      if (typeof window !== "undefined") {
+        const currentPath = `${window.location.pathname}${window.location.search}`;
+        const loginUrl = `/login?next=${encodeURIComponent(currentPath)}`;
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.assign(loginUrl);
+        }
+      }
+      throw error;
     }
     headers.authorization = `Bearer ${session.token}`;
   }

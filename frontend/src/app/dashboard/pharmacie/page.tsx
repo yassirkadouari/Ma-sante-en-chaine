@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardCheck, ShieldAlert, QrCode, Search, CheckCircle2, Package, Activity, Info, AlertTriangle, UserSearch } from "lucide-react";
 import { apiRequest } from "@/lib/api";
+import QrScanner from "qr-scanner";
 
 type PrescriptionSummary = {
   recordId: string;
@@ -45,10 +46,144 @@ export default function PharmacieDashboard() {
   const [items, setItems] = useState<PrescriptionSummary[]>([]);
   const [status, setStatus] = useState<{ type: "success" | "error" | "info", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraSupported, setCameraSupported] = useState(true);
 
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const qrScannerRef = useRef<QrScanner | null>(null);
+
+  const stopCamera = () => {
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  const startQrCamera = async () => {
+    try {
+      setStatus(null);
+
+      if (!window.isSecureContext) {
+        setCameraSupported(false);
+        setStatus({
+          type: "error",
+          msg: "Contexte non sécurisé: ouvrez l'app en HTTPS ou via http://localhost pour activer la caméra.",
+        });
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraSupported(false);
+        setStatus({
+          type: "error",
+          msg: "API caméra indisponible dans ce navigateur/contexte. Essayez Chrome/Edge récent sur localhost/HTTPS.",
+        });
+        return;
+      }
+
+      const hasCamera = await QrScanner.hasCamera();
+      if (!hasCamera) {
+        setCameraSupported(false);
+        setStatus({ type: "error", msg: "Aucune caméra détectée sur cet appareil." });
+        return;
+      }
+
+      setCameraOpen(true);
+      setCameraSupported(true);
+
+      // Wait one tick so the video element is mounted before scanner initialization.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      if (!videoRef.current) {
+        throw new Error("Element vidéo indisponible pour le scan caméra.");
+      }
+
+      const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          const rawValue = String((result as { data?: string })?.data || "").trim();
+          if (!rawValue) return;
+
+          let extractedRecordId = rawValue;
+          try {
+            const parsed = JSON.parse(rawValue);
+            extractedRecordId = String(parsed.recordId || parsed.id || rawValue).trim();
+          } catch {
+            extractedRecordId = rawValue;
+          }
+
+          setRecordId(extractedRecordId);
+          setStatus({ type: "success", msg: `QR détecté: ${extractedRecordId}` });
+          stopCamera();
+          setCameraOpen(false);
+        },
+        {
+          preferredCamera: "environment",
+          highlightScanRegion: true,
+          returnDetailedScanResult: true,
+        }
+      );
+
+      qrScannerRef.current = scanner;
+      await scanner.start();
+
+    } catch (error: any) {
+      stopCamera();
+      setCameraOpen(false);
+
+      const errorName = String(error?.name || "");
+      const errorMessage = String(error?.message || "");
+
+      if (errorName === "NotAllowedError" || /permission/i.test(errorMessage)) {
+        setStatus({
+          type: "error",
+          msg: "Accès caméra refusé. Autorisez la caméra dans les permissions du navigateur puis réessayez.",
+        });
+        return;
+      }
+
+      if (errorName === "NotReadableError") {
+        setStatus({
+          type: "error",
+          msg: "Caméra occupée par une autre application/onglet. Fermez-les puis réessayez.",
+        });
+        return;
+      }
+
+      if (errorName === "NotFoundError" || errorName === "OverconstrainedError") {
+        setStatus({ type: "error", msg: "Caméra introuvable ou non compatible sur cet appareil." });
+        return;
+      }
+
+      if (errorName === "SecurityError") {
+        setCameraSupported(false);
+        setStatus({
+          type: "error",
+          msg: "Contexte de sécurité bloque la caméra. Utilisez HTTPS ou localhost.",
+        });
+        return;
+      }
+
+      setStatus({ type: "error", msg: errorMessage || "Impossible d'ouvrir la caméra." });
+    }
+  };
+
+  const closeQrCamera = () => {
+    stopCamera();
+    setCameraOpen(false);
+  };
 
   const refresh = async () => {
     try {
@@ -168,6 +303,45 @@ export default function PharmacieDashboard() {
             >
               {busy ? "[ VÉRIFICATION_EN_COURS... ]" : <><Activity size={18} /> VÉRIFIER_BLOCKCHAIN</>}
             </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={startQrCamera}
+                disabled={busy || cameraOpen}
+                className="w-full py-3 bg-cyan-700 hover:bg-cyan-600 text-white font-black rounded-2xl transition-all disabled:opacity-30 text-xs"
+              >
+                OUVRIR_SCAN_CAMÉRA
+              </button>
+              <button
+                type="button"
+                onClick={closeQrCamera}
+                disabled={!cameraOpen}
+                className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-black rounded-2xl transition-all disabled:opacity-30 text-xs"
+              >
+                STOP_SCAN
+              </button>
+            </div>
+
+            {cameraOpen ? (
+              <div className="space-y-2">
+                <video
+                  ref={videoRef}
+                  className="w-full rounded-2xl border border-cyan-500/40 bg-black aspect-video"
+                  muted
+                  playsInline
+                />
+                <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-bold text-center">
+                  Caméra active: pointez le QR code de l'ordonnance
+                </p>
+              </div>
+            ) : null}
+
+            {!cameraSupported ? (
+              <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold">
+                Scanner caméra indisponible sur ce navigateur. Utilisez la saisie Record ID.
+              </p>
+            ) : null}
           </div>
 
           <div className="bg-black/40 p-4 rounded-xl border border-neutral-800 flex gap-3">

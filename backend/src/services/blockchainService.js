@@ -1,7 +1,79 @@
 const BlockchainAnchor = require("../models/BlockchainAnchor");
 const { normalizeWallet } = require("../utils/signature");
 
-async function storeHash({ recordId, hash, ownerWallet, authorizedWallets = [] }) {
+const blockchainMode = String(process.env.BLOCKCHAIN_MODE || "mock").trim().toLowerCase();
+const blockchainApiUrl = String(process.env.BLOCKCHAIN_API_URL || "").trim();
+const blockchainTimeoutMs = Number(process.env.BLOCKCHAIN_TIMEOUT_MS || 8000);
+
+function isRemoteMode() {
+  return blockchainMode === "remote";
+}
+
+function withStatusError(message, status, publicMessage) {
+  return Object.assign(new Error(message), {
+    status,
+    publicMessage: publicMessage || message
+  });
+}
+
+async function remoteRequest(path, payload) {
+  if (!blockchainApiUrl) {
+    throw withStatusError(
+      "BLOCKCHAIN_API_URL is required when BLOCKCHAIN_MODE=remote",
+      503,
+      "Blockchain service unavailable"
+    );
+  }
+
+  if (typeof fetch !== "function") {
+    throw withStatusError(
+      "Global fetch is unavailable in this Node runtime",
+      503,
+      "Blockchain service unavailable"
+    );
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), blockchainTimeoutMs);
+
+  try {
+    const response = await fetch(`${blockchainApiUrl.replace(/\/$/, "")}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload || {}),
+      signal: controller.signal
+    });
+
+    let body = {};
+    try {
+      body = await response.json();
+    } catch (error) {
+      body = {};
+    }
+
+    if (!response.ok) {
+      throw withStatusError(
+        body.error || `Blockchain API error (${response.status})`,
+        response.status,
+        body.error || "Blockchain operation failed"
+      );
+    }
+
+    return body;
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw withStatusError("Blockchain request timeout", 504, "Blockchain request timeout");
+    }
+    if (error && typeof error.status === "number") {
+      throw error;
+    }
+    throw withStatusError("Blockchain service unreachable", 503, "Blockchain service unreachable");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function mockStoreHash({ recordId, hash, ownerWallet, authorizedWallets = [] }) {
   const owner = normalizeWallet(ownerWallet);
   const authorized = [...new Set(authorizedWallets.map(normalizeWallet).filter(Boolean))];
 
@@ -16,7 +88,7 @@ async function storeHash({ recordId, hash, ownerWallet, authorizedWallets = [] }
   return anchor;
 }
 
-async function verifyHash(recordId, candidateHash) {
+async function mockVerifyHash(recordId, candidateHash) {
   const anchor = await BlockchainAnchor.findOne({ recordId }).lean();
   if (!anchor) {
     return { exists: false, valid: false, storedHash: null };
@@ -30,7 +102,7 @@ async function verifyHash(recordId, candidateHash) {
   };
 }
 
-async function grantAccess(recordId, wallet, requestedByWallet) {
+async function mockGrantAccess(recordId, wallet, requestedByWallet) {
   const actor = normalizeWallet(requestedByWallet);
   const target = normalizeWallet(wallet);
   const anchor = await BlockchainAnchor.findOne({ recordId });
@@ -50,7 +122,7 @@ async function grantAccess(recordId, wallet, requestedByWallet) {
   return anchor;
 }
 
-async function revokeAccess(recordId, wallet, requestedByWallet) {
+async function mockRevokeAccess(recordId, wallet, requestedByWallet) {
   const actor = normalizeWallet(requestedByWallet);
   const target = normalizeWallet(wallet);
   const anchor = await BlockchainAnchor.findOne({ recordId });
@@ -71,7 +143,7 @@ async function revokeAccess(recordId, wallet, requestedByWallet) {
   return anchor;
 }
 
-async function isAuthorized(recordId, wallet) {
+async function mockIsAuthorized(recordId, wallet) {
   const normalized = normalizeWallet(wallet);
   const anchor = await BlockchainAnchor.findOne({ recordId }).lean();
   if (!anchor) {
@@ -85,7 +157,7 @@ async function isAuthorized(recordId, wallet) {
   return anchor.authorizedWallets.map(normalizeWallet).includes(normalized);
 }
 
-async function deliverPrescription(recordId, pharmacyWallet) {
+async function mockDeliverPrescription(recordId, pharmacyWallet) {
   const anchor = await BlockchainAnchor.findOne({ recordId });
 
   if (!anchor) {
@@ -112,7 +184,7 @@ async function deliverPrescription(recordId, pharmacyWallet) {
   return anchor;
 }
 
-async function cancelPrescription(recordId) {
+async function mockCancelPrescription(recordId) {
   const anchor = await BlockchainAnchor.findOne({ recordId });
   if (!anchor) {
     throw Object.assign(new Error("Anchor not found"), { status: 404, publicMessage: "On-chain anchor not found" });
@@ -120,6 +192,105 @@ async function cancelPrescription(recordId) {
   anchor.status = "CANCELLED";
   await anchor.save();
   return anchor;
+}
+
+async function storeHash({ recordId, hash, ownerWallet, authorizedWallets = [] }) {
+  if (!isRemoteMode()) {
+    return mockStoreHash({ recordId, hash, ownerWallet, authorizedWallets });
+  }
+
+  const result = await remoteRequest("/anchors/store", {
+    recordId,
+    hash,
+    ownerWallet: normalizeWallet(ownerWallet),
+    authorizedWallets: [...new Set((authorizedWallets || []).map(normalizeWallet).filter(Boolean))]
+  });
+
+  return result.anchor || result;
+}
+
+async function verifyHash(recordId, candidateHash) {
+  if (!isRemoteMode()) {
+    return mockVerifyHash(recordId, candidateHash);
+  }
+
+  const result = await remoteRequest("/anchors/verify", {
+    recordId,
+    candidateHash
+  });
+
+  return {
+    exists: Boolean(result.exists),
+    valid: Boolean(result.valid),
+    storedHash: result.storedHash || null,
+    status: result.status || null
+  };
+}
+
+async function grantAccess(recordId, wallet, requestedByWallet) {
+  if (!isRemoteMode()) {
+    return mockGrantAccess(recordId, wallet, requestedByWallet);
+  }
+
+  const result = await remoteRequest("/anchors/grant", {
+    recordId,
+    wallet: normalizeWallet(wallet),
+    requestedByWallet: normalizeWallet(requestedByWallet)
+  });
+
+  return result.anchor || result;
+}
+
+async function revokeAccess(recordId, wallet, requestedByWallet) {
+  if (!isRemoteMode()) {
+    return mockRevokeAccess(recordId, wallet, requestedByWallet);
+  }
+
+  const result = await remoteRequest("/anchors/revoke", {
+    recordId,
+    wallet: normalizeWallet(wallet),
+    requestedByWallet: normalizeWallet(requestedByWallet)
+  });
+
+  return result.anchor || result;
+}
+
+async function isAuthorized(recordId, wallet) {
+  if (!isRemoteMode()) {
+    return mockIsAuthorized(recordId, wallet);
+  }
+
+  const result = await remoteRequest("/anchors/is-authorized", {
+    recordId,
+    wallet: normalizeWallet(wallet)
+  });
+
+  return Boolean(result.authorized);
+}
+
+async function deliverPrescription(recordId, pharmacyWallet) {
+  if (!isRemoteMode()) {
+    return mockDeliverPrescription(recordId, pharmacyWallet);
+  }
+
+  const result = await remoteRequest("/anchors/deliver", {
+    recordId,
+    pharmacyWallet: normalizeWallet(pharmacyWallet)
+  });
+
+  return result.anchor || result;
+}
+
+async function cancelPrescription(recordId) {
+  if (!isRemoteMode()) {
+    return mockCancelPrescription(recordId);
+  }
+
+  const result = await remoteRequest("/anchors/cancel", {
+    recordId
+  });
+
+  return result.anchor || result;
 }
 
 module.exports = {

@@ -518,6 +518,13 @@ Admin page supports:
 - Redirect after login uses verified session role:
   - /dashboard/<role>
 
+### 8.8 Pharmacie QR scanning workflow
+
+- Pharmacy dashboard now supports camera QR scan directly in browser.
+- If browser supports `BarcodeDetector`, pharmacist can click camera scan and auto-fill `recordId`.
+- If unsupported browser, manual `recordId` input remains available.
+- Verification then runs through `/prescriptions/:recordId/scan`, followed by delivery flow.
+
 ## 9. Identity and Approval Rules (Current Business Logic)
 
 ### 9.1 User self-entry
@@ -617,6 +624,9 @@ Backend .env.example:
 - LOGIN_NONCE_TTL_SECONDS=300
 - REQUEST_SKEW_SECONDS=300
 - ADMIN_WALLETS=
+- BLOCKCHAIN_MODE=mock
+- BLOCKCHAIN_API_URL=
+- BLOCKCHAIN_TIMEOUT_MS=8000
 
 Frontend .env.local expected:
 - NEXT_PUBLIC_API_URL=http://localhost:4000
@@ -759,6 +769,10 @@ Replace the current Mongo-backed mock anchor implementation with a real blockcha
 Current file:
 - backend/src/services/blockchainService.js
 
+Current runtime behavior:
+- `BLOCKCHAIN_MODE=mock` (default): uses Mongo `BlockchainAnchor` collection.
+- `BLOCKCHAIN_MODE=remote`: forwards anchor operations to external blockchain API.
+
 Current persistence model used by adapter:
 - backend/src/models/BlockchainAnchor.js
 
@@ -773,6 +787,15 @@ Current adapter methods that must stay available to route/service callers:
 
 Compatibility rule:
 - Keep return shapes and error semantics compatible so routes do not require large rewrites.
+
+Remote blockchain API contract expected by backend adapter:
+- POST /anchors/store
+- POST /anchors/verify
+- POST /anchors/grant
+- POST /anchors/revoke
+- POST /anchors/is-authorized
+- POST /anchors/deliver
+- POST /anchors/cancel
 
 ### 19.3 Where blockchain checks are business-critical
 
