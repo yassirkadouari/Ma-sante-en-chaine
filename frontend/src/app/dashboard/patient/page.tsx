@@ -14,8 +14,17 @@ type PrescriptionSummary = {
   status: string;
   doctorWallet: string;
   version: number;
-  pdfPath?: string;
+  hasTextContent?: boolean;
   totalAmount?: number;
+};
+
+type PrescriptionDetails = {
+  recordId: string;
+  data: {
+    ordonnanceText?: string;
+    medications?: string;
+    instructions?: string;
+  };
 };
 
 type MedicalMine = {
@@ -65,6 +74,8 @@ export default function PatientDashboard() {
   const [claims, setClaims] = useState<ClaimItem[]>([]);
   const [newDoctorWallet, setNewDoctorWallet] = useState("");
   const [selectedPresc, setSelectedPresc] = useState<PrescriptionSummary | null>(null);
+  const [selectedPrescDetails, setSelectedPrescDetails] = useState<PrescriptionDetails | null>(null);
+  const [loadingSelectedPresc, setLoadingSelectedPresc] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -87,6 +98,31 @@ export default function PatientDashboard() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    const loadSelectedPrescription = async () => {
+      if (!selectedPresc) {
+        setSelectedPrescDetails(null);
+        return;
+      }
+
+      try {
+        setLoadingSelectedPresc(true);
+        const details = await apiRequest<PrescriptionDetails>({
+          path: `/prescriptions/${selectedPresc.recordId}`,
+          signed: true
+        });
+        setSelectedPrescDetails(details);
+      } catch (error: any) {
+        setSelectedPrescDetails(null);
+        setStatus({ type: "error", msg: error.message || "Impossible de charger le contenu de l'ordonnance." });
+      } finally {
+        setLoadingSelectedPresc(false);
+      }
+    };
+
+    loadSelectedPrescription();
+  }, [selectedPresc]);
+
   const changeDoctor = async () => {
     try {
       setBusy(true);
@@ -107,31 +143,33 @@ export default function PatientDashboard() {
     }
   };
 
-  const downloadPdf = async (pdfPathOrRecordId: string) => {
-    // Use the secure download endpoint with auth token
+  const getClaimForSource = (sourceId: string) => {
+    return claims.find(c => c.sourceId === sourceId);
+  };
+
+  const downloadPdf = async (pathOrUrl: string) => {
+    if (!pathOrUrl) return;
+
     const session = loadSession();
-    const recordId = pdfPathOrRecordId; // we now pass recordId directly from the card
-    const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/prescriptions/${recordId}/pdf`;
-    
-    // Fetch with auth header then create a blob download
+    const isAbsolute = /^https?:\/\//i.test(pathOrUrl);
+    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    const url = isAbsolute ? pathOrUrl : `${base}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+
     try {
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${session?.token || ""}` }
       });
       if (!res.ok) throw new Error("Fichier introuvable");
+
       const blob = await res.blob();
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `ordonnance-${recordId.slice(0, 8)}.pdf`;
+      link.download = `document-${Date.now()}.pdf`;
       link.click();
       URL.revokeObjectURL(link.href);
     } catch {
-      setStatus({ type: "error", msg: "Impossible de télécharger l'ordonnance." });
+      setStatus({ type: "error", msg: "Impossible de télécharger le document." });
     }
-  };
-
-  const getClaimForSource = (sourceId: string) => {
-    return claims.find(c => c.sourceId === sourceId);
   };
 
   const StatusBadge = ({ status }: { status: string }) => {
@@ -281,11 +319,6 @@ export default function PatientDashboard() {
                             <p className="text-[10px] text-neutral-500 mb-4 tracking-tighter font-mono italic">Signature: {item.doctorWallet.slice(0, 16)}...</p>
                             
                             <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                              {item.pdfPath && (
-                                <button onClick={(e) => { e.stopPropagation(); downloadPdf(item.recordId); }} className="w-full py-2.5 bg-emerald-600/10 border border-emerald-600/30 text-emerald-400 rounded-xl text-[10px] font-black hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2">
-                                  <Download size={14} /> TÉLÉCHARGER LE SCELLÉ
-                                </button>
-                              )}
                               {item.status === "DELIVERED" && !claim && (
                                 <button 
                                   onClick={async (e) => { 
@@ -330,6 +363,28 @@ export default function PatientDashboard() {
                        <div className="space-y-4 border-t border-neutral-100 pt-8">
                          <div className="flex justify-between items-center bg-neutral-50 p-3 rounded-xl"><span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">TRANSACTION_ID</span><span className="text-xs font-mono font-bold">{selectedPresc.recordId.slice(0, 10)}...</span></div>
                          <div className="flex justify-between items-center bg-neutral-50 p-3 rounded-xl"><span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">SÉCURITÉ</span><span className="text-xs font-bold text-emerald-600">SCELLÉ_ANCRÉ</span></div>
+                       </div>
+                       <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl space-y-3">
+                          <p className="text-[9px] text-neutral-500 font-black uppercase tracking-[0.15em]">Contenu de l'ordonnance</p>
+                          {loadingSelectedPresc ? (
+                            <p className="text-[10px] text-neutral-500 font-mono">Chargement du contenu...</p>
+                          ) : (
+                            <>
+                              <p className="text-[10px] text-neutral-800 font-mono whitespace-pre-wrap leading-relaxed">
+                                {selectedPrescDetails?.data?.ordonnanceText || "Aucun contenu texte disponible pour cette ordonnance."}
+                              </p>
+                              {(selectedPrescDetails?.data?.medications || selectedPrescDetails?.data?.instructions) ? (
+                                <div className="pt-2 border-t border-neutral-200 space-y-2">
+                                  {selectedPrescDetails?.data?.medications ? (
+                                    <p className="text-[10px] text-neutral-700 font-mono"><span className="font-black">Médicaments:</span> {selectedPrescDetails.data.medications}</p>
+                                  ) : null}
+                                  {selectedPrescDetails?.data?.instructions ? (
+                                    <p className="text-[10px] text-neutral-700 font-mono"><span className="font-black">Instructions:</span> {selectedPrescDetails.data.instructions}</p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </>
+                          )}
                        </div>
                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
                           <Info size={16} className="text-blue-500 shrink-0 mt-1" />

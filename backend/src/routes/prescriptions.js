@@ -1,8 +1,5 @@
-const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 const express = require("express");
-const multer = require("multer");
 const { z } = require("zod");
 const PrescriptionRecord = require("../models/PrescriptionRecord");
 const PrescriptionLifecycleEvent = require("../models/PrescriptionLifecycleEvent");
@@ -19,39 +16,14 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-const UPLOAD_DIR = path.join(__dirname, "../../uploads/prescriptions");
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname) || ".pdf";
-    cb(null, "presc-" + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5 MB limit
-});
-
-function calculateFileHash(filePath) {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash("sha256");
-    const stream = fs.createReadStream(filePath);
-    stream.on("error", (err) => reject(err));
-    stream.on("data", (chunk) => hash.update(chunk));
-    stream.on("end", () => resolve(hash.digest("hex")));
-  });
-}
-
 const createSchema = z.object({
   patientWallet: z.string().min(10),
   pharmacyWallet: z.string().min(10).optional(),
-  data: z.record(z.any())
+  data: z.object({
+    ordonnanceText: z.string().min(3),
+    medications: z.string().optional(),
+    instructions: z.string().optional()
+  })
 });
 
 const reviseSchema = z.object({
@@ -106,19 +78,14 @@ async function verifyRecordIntegrity(record) {
 router.post(
   "/",
   requireRole([ROLES.MEDECIN]),
-  upload.single("pdf"),
+  requireSignedRequest,
   async (req, res, next) => {
     try {
-      const parsed = createSchema.parse(JSON.parse(req.body.payload || "{}"));
-
-      if (!req.file) {
-        return res.status(400).json({ error: "PDF file is required for prescription" });
-      }
+      const parsed = createSchema.parse(req.body || {});
 
       const recordId = crypto.randomUUID();
       const issuedAt = new Date();
       const encryptedData = encryptJson(parsed.data);
-      const pdfHash = await calculateFileHash(req.file.path);
 
       const recordData = {
         recordId,
@@ -131,17 +98,13 @@ router.post(
         version: 1,
         hashVersion: "v2",
         encryptedData,
-        signedRequest: {
-          message: "Uploaded prescription PDF",
-          signature: "NA", // Original code had signedRequest from middleware, but file upload changes things.
-          signedByWallet: req.auth.walletAddress
-        },
+        signedRequest: req.signedRequest,
         issuedAt,
-        pdfPath: req.file.path,
-        blockchainHash: pdfHash
+        blockchainHash: "pending"
       };
 
       recordData.dataHash = sha256Hex(canonicalize(buildRecordHashPayload(recordData)));
+      recordData.blockchainHash = recordData.dataHash;
 
       await PrescriptionRecord.create(recordData);
       await PrescriptionLifecycleEvent.create({
@@ -151,10 +114,9 @@ router.post(
         actorRole: req.auth.role
       });
 
-      // Anchor both the data hash and the PDF hash
       await blockchainService.storeHash({
         recordId,
-        hash: pdfHash,
+        hash: recordData.dataHash,
         ownerWallet: recordData.patientWallet,
         authorizedWallets: [recordData.doctorWallet, recordData.pharmacyWallet].filter(Boolean)
       });
@@ -168,56 +130,20 @@ router.post(
         ip: req.ip,
         metadata: {
           patientWallet: recordData.patientWallet,
-          pdfHash
+          dataHash: recordData.dataHash
         }
       });
 
       res.status(201).json({
         recordId,
         status: "PRESCRIBED",
-        blockchainHash: pdfHash
+        blockchainHash: recordData.dataHash
       });
     } catch (error) {
-      if (req.file) fs.unlinkSync(req.file.path);
       next(error);
     }
   }
 );
-
-router.get("/:recordId/pdf", async (req, res, next) => {
-  try {
-    const record = await PrescriptionRecord.findOne({ recordId: req.params.recordId }).lean();
-    if (!record) {
-      return res.status(404).json({ error: "Prescription not found" });
-    }
-
-    // Only the patient, the prescribing doctor, or an authorized wallet can download
-    const wallet = normalizeWallet(req.auth.walletAddress);
-    const isPatient = normalizeWallet(record.patientWallet) === wallet;
-    const isDoctor = normalizeWallet(record.doctorWallet) === wallet;
-    const isAuthorized = await blockchainService.isAuthorized(record.recordId, wallet);
-
-    if (!isPatient && !isDoctor && !isAuthorized) {
-      return res.status(403).json({ error: "Not authorized to download this prescription" });
-    }
-
-    if (!record.pdfPath) {
-      return res.status(404).json({ error: "No PDF file found for this prescription" });
-    }
-
-    const absolutePath = path.isAbsolute(record.pdfPath)
-      ? record.pdfPath
-      : path.join(__dirname, "../../", record.pdfPath);
-
-    if (!fs.existsSync(absolutePath)) {
-      return res.status(404).json({ error: "PDF file not found on server" });
-    }
-
-    res.download(absolutePath, `ordonnance-${req.params.recordId.slice(0, 8)}.pdf`);
-  } catch (error) {
-    next(error);
-  }
-});
 
 router.get("/", async (req, res, next) => {
   try {
@@ -253,7 +179,7 @@ router.get("/", async (req, res, next) => {
           version: record.version,
           previousRecordId: record.previousRecordId || null,
           status: chain.status || "PRESCRIBED",
-          pdfPath: record.pdfPath,
+          hasTextContent: Boolean(record.encryptedData && record.encryptedData.ciphertext),
           totalAmount: record.totalAmount || 0,
           createdAt: record.createdAt
         };
@@ -277,11 +203,15 @@ router.get("/:recordId/scan", requireRole([ROLES.PHARMACIE]), requireSignedReque
     // Get blockchain status and verify hash
     const chain = await blockchainService.verifyHash(record.recordId, record.blockchainHash || record.dataHash);
 
-    // Decrypt to show medications (but NOT patient personal data)
-    let medications = [];
+    // Decrypt to show prescription string content for the pharmacy.
+    let ordonnanceText = "";
+    let medications = "";
+    let instructions = "";
     try {
       const decrypted = decryptJson(record.encryptedData);
-      medications = Array.isArray(decrypted?.medications) ? decrypted.medications : [];
+      ordonnanceText = String(decrypted?.ordonnanceText || "");
+      medications = String(decrypted?.medications || "");
+      instructions = String(decrypted?.instructions || "");
     } catch (e) { /* ignore decryption error */ }
 
     await logAudit({
@@ -299,7 +229,7 @@ router.get("/:recordId/scan", requireRole([ROLES.PHARMACIE]), requireSignedReque
       status: chain.status || "PRESCRIBED",
       blockchainHash: record.blockchainHash,
       issuedAt: record.issuedAt,
-      data: { medications }
+      data: { ordonnanceText, medications, instructions }
     });
   } catch (error) {
     next(error);

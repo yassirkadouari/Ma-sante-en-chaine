@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { FilePlus2, ShieldCheck, Upload, FileText, UserSearch, ClipboardList, Activity, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FilePlus2, ShieldCheck, FileText, UserSearch, ClipboardList, Activity, CheckCircle2, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/api";
-import { loadSession } from "@/lib/session";
 
 type PrescriptionSummary = {
   recordId: string;
@@ -49,9 +48,8 @@ export default function MedecinDashboard() {
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
   
-  // PDF Prescription State
-  const prescFileInputRef = useRef<HTMLInputElement>(null);
   const [prescData, setPrescData] = useState({
+    ordonnanceText: "",
     medications: "Ex: Paracétamol 1g (3x/j)",
     instructions: "Repos complet 3 jours."
   });
@@ -69,39 +67,33 @@ export default function MedecinDashboard() {
     refresh();
   }, []);
 
-  const createPdfPrescription = async () => {
+  const createTextPrescription = async () => {
     try {
       setBusy(true);
       setStatus(null);
-      
-      const file = prescFileInputRef.current?.files?.[0];
-      if (!file) throw new Error("Le fichier PDF de l'ordonnance est obligatoire.");
-      if (!patientWallet) throw new Error("L'adresse wallet du patient est obligatoire.");
 
-      const formData = new FormData();
-      formData.append("pdf", file);
-      formData.append("payload", JSON.stringify({
+      if (!patientWallet) throw new Error("L'adresse wallet du patient est obligatoire.");
+      if (!prescData.ordonnanceText.trim()) throw new Error("Le contenu texte de l'ordonnance est obligatoire.");
+
+      const resBody = await apiRequest<{ blockchainHash: string }>({
+        method: "POST",
+        path: "/prescriptions",
+        signed: true,
+        body: {
         patientWallet,
         pharmacyWallet: pharmacyWallet || undefined,
         data: prescData
-      }));
-
-      const session = loadSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/prescriptions`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${session?.token || ""}`
-        },
-        body: formData
+        }
       });
-
-      const resBody = await response.json();
-      if (!response.ok) throw new Error(resBody.error || "Échec de l'émission");
 
       setStatus({ type: "success", msg: `Ordonnance émise & ancrée! Hash: ${resBody.blockchainHash.slice(0, 16)}...` });
       setPatientWallet("");
       setPharmacyWallet("");
-      if (prescFileInputRef.current) prescFileInputRef.current.value = "";
+      setPrescData({
+        ordonnanceText: "",
+        medications: "Ex: Paracétamol 1g (3x/j)",
+        instructions: "Repos complet 3 jours."
+      });
       refresh();
     } catch (error: any) {
       setStatus({ type: "error", msg: error.message });
@@ -209,21 +201,37 @@ export default function MedecinDashboard() {
             </div>
 
             <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Charger l'Ordonnance (PDF)</label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-800 rounded-2xl cursor-pointer bg-neutral-950 hover:bg-neutral-900 hover:border-emerald-500/30 transition-all">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-3 text-neutral-600 group-hover:text-emerald-500 transition-colors" />
-                    <p className="text-xs text-neutral-500 tracking-tighter uppercase font-bold">Cliquez pour téléverser le scellé PDF</p>
-                  </div>
-                  <input type="file" ref={prescFileInputRef} accept="application/pdf" className="hidden" />
-                </label>
+              <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Contenu texte de l'Ordonnance</label>
+              <textarea
+                value={prescData.ordonnanceText}
+                onChange={(event) => setPrescData((prev) => ({ ...prev, ordonnanceText: event.target.value }))}
+                placeholder="Ex: Patient X - Traitement: Paracétamol 1g matin/soir pendant 5 jours..."
+                className="w-full min-h-[120px] p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-emerald-500/50 transition-all text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Médicaments</label>
+                <textarea
+                  value={prescData.medications}
+                  onChange={(event) => setPrescData((prev) => ({ ...prev, medications: event.target.value }))}
+                  className="w-full min-h-[100px] p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-emerald-500/50 transition-all text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Instructions</label>
+                <textarea
+                  value={prescData.instructions}
+                  onChange={(event) => setPrescData((prev) => ({ ...prev, instructions: event.target.value }))}
+                  className="w-full min-h-[100px] p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-emerald-500/50 transition-all text-sm"
+                />
               </div>
             </div>
 
             <button 
               disabled={busy || !patientWallet} 
-              onClick={createPdfPrescription} 
+              onClick={createTextPrescription} 
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-30 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
             >
               {busy ? "[ ANCRAGE_EN_COURS... ]" : <><FileText size={18} /> ÉMETTRE_ORDONNANCE</>}
