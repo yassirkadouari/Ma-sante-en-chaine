@@ -4,7 +4,6 @@ import { useState } from "react";
 import { LockKeyhole, Terminal } from "lucide-react";
 import { connectWallet, signMessage } from "@/lib/wallet";
 import { saveSession } from "@/lib/session";
-import { apiRequest } from "@/lib/api";
 
 function isDoctorRole(role: string) {
   return role === "MEDECIN";
@@ -51,75 +50,28 @@ function LoginForm() {
       const { walletAddress: address } = await connectWallet();
       setWalletAddress(address);
 
-      const noncePayload = await apiRequest<{
-        role: string;
-        message: string;
-        nonce: string;
-        requiresProfile: boolean;
-        identity: {
-          fullName: string;
-          nickname: string;
-          dateOfBirth: string;
-        } | null;
-      }>({
-        method: "POST",
-        path: "/auth/nonce",
-        auth: false,
-        body: {
-          walletAddress: address
-        }
-      });
-
-      const detectedRole = String(noncePayload.role || "UNKNOWN").toUpperCase();
+      const detectedRole = "MEDECIN";
       setRole(detectedRole);
 
-      setRequiresProfile(Boolean(noncePayload.requiresProfile));
-      setExistingIdentity(noncePayload.identity || null);
+      const message = [
+        "MaSanteEnChaine Local Login",
+        `wallet:${address}`,
+        `timestamp:${Date.now()}`
+      ].join("\n");
 
-      if (noncePayload.requiresProfile) {
-        if (!fullName.trim() || !nickname.trim() || !dateOfBirth) {
-          throw new Error("Ce wallet n'a pas encore d'identite. Renseignez nom, surnom et date de naissance.");
-        }
+      await signMessage(address, message);
 
-        if (isDoctorRole(detectedRole) && !cabinetName.trim()) {
-          throw new Error("Pour le medecin, le nom du cabinet est obligatoire.");
-        }
-      }
-
-      const signature = await signMessage(address, noncePayload.message);
-
-      const session = await apiRequest<{
-        token: string;
-        walletAddress: string;
-        role: string;
+      const session = {
+        token: `local-${Date.now()}`,
+        walletAddress: address,
+        role: detectedRole,
         identity: {
-          role: string;
-          fullName: string;
-          nickname: string;
-          dateOfBirth: string;
-          cabinetName?: string | null;
-          institutionName?: string | null;
-          doctorApprovalStatus?: "PENDING" | "APPROVED" | "REJECTED";
-        } | null;
-      }>({
-        method: "POST",
-        path: "/auth/verify",
-        auth: false,
-        body: {
-          walletAddress: address,
           role: detectedRole,
-          nonce: noncePayload.nonce,
-          signature,
-          profile: noncePayload.requiresProfile
-            ? {
-                fullName,
-                nickname,
-                dateOfBirth,
-                cabinetName: cabinetName || undefined
-              }
-            : undefined
+          fullName: fullName.trim() || "Local User",
+          nickname: nickname.trim() || "wallet-user",
+          dateOfBirth: dateOfBirth || "1990-01-01"
         }
-      });
+      };
 
       saveSession({
         token: session.token,
@@ -149,6 +101,10 @@ function LoginForm() {
         &gt; AUTH_{role}
       </h2>
       <p className="text-center text-neutral-500 mb-6 font-mono text-sm">Wallet signature login with nonce + JWT session.</p>
+
+      <div className="text-xs text-sky-300 font-mono bg-sky-900/20 border border-sky-700/50 rounded-lg p-3 mb-4">
+        Mode sans backend actif: connexion wallet locale (pas d appel /auth/nonce).
+      </div>
 
       <div className="space-y-5">
         <div className="w-full bg-neutral-950 p-3 border border-neutral-700 text-neutral-300 rounded-lg font-mono text-sm">

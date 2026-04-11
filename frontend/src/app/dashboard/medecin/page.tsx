@@ -47,6 +47,9 @@ type PatientArchive = {
 
 export default function MedecinDashboard() {
   const blockchainApiBase = (process.env.NEXT_PUBLIC_BLOCKCHAIN_API_URL || "http://localhost:4600").replace(/\/$/, "");
+  const hasIpfsConfigured = Boolean(
+    process.env.NEXT_PUBLIC_IPFS_API_URL && process.env.NEXT_PUBLIC_IPFS_API_TOKEN
+  );
   const [patientWallet, setPatientWallet] = useState("");
   const [pharmacyWallet, setPharmacyWallet] = useState("");
   const [items, setItems] = useState<PrescriptionSummary[]>([]);
@@ -67,7 +70,7 @@ export default function MedecinDashboard() {
     medications: "Ex: Paracétamol 1g (3x/j)",
     instructions: "Repos complet 3 jours."
   });
-  const [enableIpfs, setEnableIpfs] = useState(true);
+  const [enableIpfs, setEnableIpfs] = useState(hasIpfsConfigured);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
 
   const refresh = async () => {
@@ -108,6 +111,10 @@ export default function MedecinDashboard() {
 
       let ipfsMetadata: { cid: string; payloadHash: string; encryptionVersion?: string } | undefined;
       if (enableIpfs) {
+        if (!hasIpfsConfigured) {
+          throw new Error("Configuration IPFS absente. Vérifie frontend/.env.local puis redémarre npm run dev.");
+        }
+
         if (encryptionPassphrase.trim().length < 8) {
           throw new Error("La passphrase de chiffrement IPFS doit contenir au moins 8 caractères.");
         }

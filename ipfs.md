@@ -265,3 +265,53 @@ Verification terminal:
 curl -s http://localhost:4600/anchors | jq
 curl -s http://localhost:4600/events | jq
 ```
+
+## Migration MongoDB -> IPFS -> Blockchain (sans Node.js)
+
+Un script de migration est disponible:
+- `scripts/migrate_mongo_to_ipfs.py`
+
+Il migre les ordonnances MongoDB vers:
+1. Pinata (JSON chiffre/existant)
+2. Ancrage Rust API (`/anchors/store`)
+
+Installation dependances Python:
+```bash
+python3 -m pip install --user requests pymongo
+```
+
+Dry-run (ne push rien, juste lecture Mongo):
+```bash
+set -a && source frontend/.env.local && set +a
+python3 scripts/migrate_mongo_to_ipfs.py --dry-run --limit 3
+```
+
+Migration reelle:
+```bash
+set -a && source frontend/.env.local && set +a
+python3 scripts/migrate_mongo_to_ipfs.py --mongo-uri "mongodb://127.0.0.1:27017/ma_sante_en_chaine"
+```
+
+Si Mongo est distant (Atlas ou autre):
+```bash
+python3 scripts/migrate_mongo_to_ipfs.py --mongo-uri "mongodb+srv://USER:PASS@CLUSTER/dbname"
+```
+
+## Migration complete de toutes les collections
+
+Pour migrer toutes les donnees (users, ordonnances, medical events, claims, logs, nonces, roles):
+- `scripts/migrate_all_mongo_to_ipfs.py`
+
+Dry-run global:
+```bash
+set -a && source frontend/.env.local && set +a
+python3 scripts/migrate_all_mongo_to_ipfs.py --dry-run
+```
+
+Migration globale reelle:
+```bash
+set -a && source frontend/.env.local && set +a
+python3 scripts/migrate_all_mongo_to_ipfs.py
+```
+
+Le script est idempotent: si un enregistrement est deja ancre, il est marque `already_anchored` et ignore.
