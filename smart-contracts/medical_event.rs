@@ -10,9 +10,14 @@ pub enum PrescriptionStatus {
 #[derive(Debug, Clone)]
 pub struct MedicalAnchor {
     pub hash: String,
+    pub cid: String,
     pub owner: String,
+    pub doctor: String,
+    pub pharmacy: Option<String>,
     pub authorized: HashSet<String>,
     pub status: PrescriptionStatus,
+    pub created_at: u64,
+    pub updated_at: u64,
 }
 
 pub struct MedicalEventContract {
@@ -30,11 +35,19 @@ impl MedicalEventContract {
         &mut self,
         id: String,
         hash: String,
+        cid: String,
         owner: String,
+        doctor: String,
+        pharmacy: Option<String>,
+        timestamp: u64,
         initial_authorized: Vec<String>,
     ) -> Result<(), String> {
         if self.anchors.contains_key(&id) {
             return Err("record already anchored".into());
+        }
+
+        if cid.trim().is_empty() {
+            return Err("cid is required".into());
         }
 
         let mut authorized = HashSet::new();
@@ -46,9 +59,14 @@ impl MedicalEventContract {
             id,
             MedicalAnchor {
                 hash,
+                cid,
                 owner,
+                doctor,
+                pharmacy,
                 authorized,
                 status: PrescriptionStatus::Prescribed,
+                created_at: timestamp,
+                updated_at: timestamp,
             },
         );
 
@@ -100,6 +118,7 @@ impl MedicalEventContract {
         }
 
         anchor.authorized.insert(wallet);
+        anchor.updated_at = now_timestamp();
         Ok(())
     }
 
@@ -119,6 +138,7 @@ impl MedicalEventContract {
         }
 
         anchor.authorized.remove(wallet);
+        anchor.updated_at = now_timestamp();
         Ok(())
     }
 
@@ -144,6 +164,7 @@ impl MedicalEventContract {
         match anchor.status {
             PrescriptionStatus::Prescribed => {
                 anchor.status = PrescriptionStatus::Delivered;
+                anchor.updated_at = now_timestamp();
                 Ok(())
             }
             PrescriptionStatus::Delivered => Err("prescription already delivered".into()),
@@ -166,6 +187,16 @@ impl MedicalEventContract {
         }
 
         anchor.status = PrescriptionStatus::Cancelled;
+        anchor.updated_at = now_timestamp();
         Ok(())
     }
+}
+
+fn now_timestamp() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }

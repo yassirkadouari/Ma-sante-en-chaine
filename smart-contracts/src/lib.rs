@@ -17,7 +17,11 @@ mod tests {
             .store_hash(
                 "rec-1".to_string(),
                 "hash-abc".to_string(),
+                "bafybeigdyr-test-cid".to_string(),
                 "patient-1".to_string(),
+                "doctor-1".to_string(),
+                Some("pharmacy-1".to_string()),
+                1,
                 vec!["doctor-1".to_string(), "pharmacy-1".to_string()],
             )
             .expect("store_hash should succeed");

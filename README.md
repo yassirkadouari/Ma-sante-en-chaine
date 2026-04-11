@@ -1,63 +1,46 @@
 # Ma Sante en Chaine
 
-Systeme de sante decentralise pour la tracabilite du parcours medical et l'acceleration des remboursements.
+Systeme de sante decentralise axe sur la tracabilite medicale, l ancrage blockchain et le stockage IPFS chiffre.
 
-## Sommaire projet
+## Etat actuel
 
-- [documentation.md](documentation.md) sert de sommaire et de preuve de mise a jour (journal technique pas a pas).
+Le backend Node.js a ete retire du repository.
 
-## Architecture technique (haut niveau)
+Architecture active:
+1. `frontend/`: Next.js (wallet-first, chiffrement local, integration IPFS)
+2. `smart-contracts/`: logique Rust + API bridge anchors/events
 
-Le projet est decoupe en trois couches :
+## Documents importants
 
-1) /frontend
-   - Next.js (App Router) pour l'UI par roles.
-   - POC wallet-only avec Polkadot.js Extension.
+1. [ipfs.md](ipfs.md): implementation IPFS, chiffrement, hashage, plan suppression backend
+2. [migrationipfs.md](migrationipfs.md): planning de migration full decentralized
+3. [documentation.md](documentation.md): reference technique (sections backend marquees legacy)
 
-2) /backend
-   - API REST Express + MongoDB.
-   - Wallet auth (nonce + signature + JWT 15min).
-   - Requetes sensibles signees (anti-replay nonce + timestamp).
-   - Chiffrement AES-256-GCM des donnees medicales.
-   - Prescriptions immuables versionnees (jamais de mise a jour directe).
-   - Verification d'integrite off-chain vs hash on-chain.
-   - RBAC, audit logs append-only, helmet, rate-limit.
+## Lancer le frontend
 
-3) /smart-contracts
-   - Modeles Rust pour ancrage hash et controle d'acces.
-   - Fonctions: store_hash, verify_hash, grant_access, revoke_access, is_authorized, deliver_prescription.
-   - Cables comme crate Rust compilable (Cargo).
-
-## Concept cle
-
-- Off-chain : donnees medicales chiffrees + versionnees.
-- On-chain : hash + owner + wallets autorises + statut prescription.
-- Verification : lecture autorisee uniquement apres verification signature, droits chain, et hash chain.
-
-## Lancer le backend (POC)
-
-```
-cd backend
+```bash
+cd frontend
 npm install
-cp .env.example .env
-npm start
+npm run dev
 ```
 
-## Lancer les modeles Rust
+## Lancer la couche Rust
 
-```
+```bash
 cd smart-contracts
-cargo test
+cargo run --bin blockchain_api
 ```
 
-## Endpoints principaux (secure)
+## Variables frontend IPFS (Pinata)
 
-- POST /auth/nonce
-- POST /auth/verify
-- GET /prescriptions
-- POST /prescriptions
-- GET /prescriptions/:recordId
-- POST /prescriptions/:recordId/revise
-- POST /prescriptions/:recordId/deliver
-- POST /prescriptions/:recordId/grant
-- POST /prescriptions/:recordId/revoke
+```env
+NEXT_PUBLIC_IPFS_API_URL=https://api.pinata.cloud/pinning
+NEXT_PUBLIC_IPFS_GATEWAY_URL=https://gateway.pinata.cloud/ipfs
+NEXT_PUBLIC_IPFS_API_TOKEN=your_pinata_jwt
+```
+
+## Notes
+
+1. La couche Rust est actuellement en memoire (etat non persistant apres restart).
+2. Le frontend migre progressivement vers appels directs blockchain + IPFS.
+3. Les anciens flux backend sont en cours de remplacement complet.

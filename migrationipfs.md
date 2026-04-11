@@ -273,3 +273,47 @@ Oui, c est faisable en 4 jours pour une version demo solide, en gardant la logiq
 - l orchestration vers le frontend wallet-first
 
 La cle est de garder un scope strict, livrer un MVP complet, puis iterer.
+
+---
+
+## Validation Jour 1 (check rapide)
+
+## 1) Contrat compile
+```bash
+cd smart-contracts
+cargo check
+```
+
+## 2) Transaction de test avec cid + hash
+```bash
+curl -s -X POST http://localhost:4600/anchors/store \
+   -H "Content-Type: application/json" \
+   -d '{
+      "recordId":"test-ipfs-001",
+      "hash":"4e2b5c0f6f0a5b5f0d7fd7ec9f4da4c50853d87495d3f91ef39db8f468ca4d56",
+      "cid":"bafybeigdyrzt5examplecidforordonnance000001",
+      "ownerWallet":"patient-wallet-001",
+      "doctorWallet":"doctor-wallet-001",
+      "pharmacyWallet":"pharmacy-wallet-001",
+      "authorizedWallets":["doctor-wallet-001","pharmacy-wallet-001"],
+      "timestamp":1712851200
+   }' | jq
+```
+
+Puis verifier:
+```bash
+curl -s http://localhost:4600/anchors/test-ipfs-001 | jq
+curl -s http://localhost:4600/events/test-ipfs-001 | jq
+```
+
+## 3) Upload JSON chiffre sur IPFS puis lecture par CID
+Utiliser le module frontend:
+- `frontend/src/lib/medicalCrypto.ts`
+- `frontend/src/lib/ipfsClient.ts`
+
+Pseudo-flow:
+1. `encryptMedicalPayload(payload, passphrase)`
+2. `sha256HexFromObject(encryptedPayload)`
+3. `uploadJsonToIpfs(encryptedPayload)` -> retourne `cid`
+4. `downloadJsonFromIpfs(cid)` pour relire
+5. compare hash local vs hash ancre
