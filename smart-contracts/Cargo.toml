@@ -1,0 +1,18 @@
+[package]
+name = "ma-sante-smart-contracts"
+version = "0.1.0"
+edition = "2021"
+description = "Rust domain models for Ma Sante en Chaine anchors and ordonnance lifecycle"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+name = "ma_sante_smart_contracts"
+path = "src/lib.rs"
+
+[dependencies]
+axum = "0.7"
+chrono = { version = "0.4", features = ["clock", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }

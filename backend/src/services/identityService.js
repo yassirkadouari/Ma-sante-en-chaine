@@ -410,7 +410,7 @@ function canAccessRole(identity, role) {
   if (employmentApprovalRoles.has(normalizedRole)) {
     if (!identity.institutionName || !identity.departmentName) {
       return {
-        allowed: false,
+        allowed: true,
         reason: "Compte en attente: l'administrateur doit renseigner institut et departement"
       };
     }

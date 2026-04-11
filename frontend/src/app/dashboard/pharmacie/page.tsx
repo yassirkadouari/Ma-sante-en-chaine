@@ -71,6 +71,15 @@ export default function PharmacieDashboard() {
     return () => stopCamera();
   }, []);
 
+  const waitForVideoElement = async (maxAttempts = 12, delayMs = 50) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (videoRef.current) return videoRef.current;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    return null;
+  };
+
   const startQrCamera = async () => {
     try {
       setStatus(null);
@@ -103,15 +112,13 @@ export default function PharmacieDashboard() {
       setCameraOpen(true);
       setCameraSupported(true);
 
-      // Wait one tick so the video element is mounted before scanner initialization.
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      if (!videoRef.current) {
-        throw new Error("Element vidéo indisponible pour le scan caméra.");
+      const videoElement = await waitForVideoElement();
+      if (!videoElement) {
+        throw new Error("Element vidéo indisponible pour le scan caméra. Réessayez dans quelques secondes.");
       }
 
       const scanner = new QrScanner(
-        videoRef.current,
+        videoElement,
         (result) => {
           const rawValue = String((result as { data?: string })?.data || "").trim();
           if (!rawValue) return;
@@ -388,7 +395,7 @@ export default function PharmacieDashboard() {
                   {archive.prescriptions.map(p => (
                     <div key={p.recordId} className="p-3 bg-black/20 rounded-xl border border-neutral-800 flex justify-between items-center text-[10px]">
                        <span className="text-violet-400 font-mono">{p.recordId.slice(0, 12)}</span>
-                       <span className={`px-2 py-0.5 rounded text-[8px] font-black ${p.status === 'USED' ? 'bg-neutral-800 text-neutral-500' : 'bg-emerald-950/40 text-emerald-400'}`}>
+                       <span className={`px-2 py-0.5 rounded text-[8px] font-black ${(p.status === 'DELIVERED' || p.status === 'USED') ? 'bg-neutral-800 text-neutral-500' : 'bg-emerald-950/40 text-emerald-400'}`}>
                          {p.status}
                        </span>
                     </div>
@@ -498,7 +505,7 @@ export default function PharmacieDashboard() {
                     <td className="p-4 font-mono text-violet-400/80">{item.recordId}</td>
                     <td className="p-4 text-neutral-300">
                       <span className={`px-2 py-1 rounded text-[8px] font-black ${
-                        item.status === "USED" ? "bg-neutral-800 text-neutral-500" : "bg-emerald-500/10 text-emerald-500"
+                        (item.status === "DELIVERED" || item.status === "USED") ? "bg-neutral-800 text-neutral-500" : "bg-emerald-500/10 text-emerald-500"
                       }`}>{item.status}</span>
                     </td>
                     <td className="p-4 text-neutral-400 font-mono italic">{item.patientWallet.slice(0, 20)}...</td>

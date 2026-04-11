@@ -225,6 +225,30 @@ Write routes are signed.
 
 Review decision checks anchored source integrity before approval/rejection.
 
+### 7.7 Detailed flow: prescription lifecycle (step by step)
+
+1. Create (`POST /prescriptions`)
+   - Doctor submits structured text payload.
+   - Backend encrypts payload and computes deterministic `dataHash`.
+   - Backend creates immutable `PrescriptionRecord` and lifecycle event `PRESCRIBED`.
+   - Backend anchors `recordId + hash + owner + authorized wallets`.
+
+2. Read (`GET /prescriptions/:recordId`)
+   - Backend checks anchor-based authorization (`owner` or `authorizedWallets`).
+   - Backend recomputes canonical hash from off-chain record payload.
+   - Backend compares recomputed hash with anchored hash.
+   - Decryption is returned only if authorization + integrity checks pass.
+
+3. Deliver (`POST /prescriptions/:recordId/deliver`)
+   - Backend rejects if anchor status is already `DELIVERED` or `CANCELLED`.
+   - Delivery transitions anchor status to `DELIVERED`.
+   - Backend stores lifecycle event and billing metadata (`totalAmount`).
+
+4. Revise (`POST /prescriptions/:recordId/revise`)
+   - Previous record is cancelled.
+   - A new immutable version is created with `previousRecordId`.
+   - New hash is anchored; old version is not overwritten.
+
 ## 8) Frontend architecture
 
 Main app routes under `frontend/src/app`:
@@ -292,12 +316,72 @@ Defenses:
 ### Auditing
 - traceable action logs with requestId and metadata
 
+### 10.5 Detailed: wallet nonce authentication flow
+
+1. Client requests nonce (`POST /auth/nonce`) with wallet address.
+2. Backend issues short-lived challenge nonce and stores it.
+3. Wallet signs nonce challenge client-side.
+4. Client sends signature proof (`POST /auth/verify`).
+5. Backend verifies signature and nonce validity (not expired, not reused).
+6. Backend applies role/identity gates and issues JWT.
+
+Why this matters:
+- prevents wallet spoofing
+- prevents login replay via one-time nonce behavior
+
+### 10.6 Detailed: signed-request anti-replay flow
+
+Sensitive routes require headers:
+- `x-msce-wallet`
+- `x-msce-signature`
+- `x-msce-timestamp`
+- `x-msce-nonce`
+
+Server verification sequence:
+1. validate timestamp skew window
+2. rebuild canonical message (`method + path + timestamp + nonce + bodyHash`)
+3. verify wallet signature
+4. persist request nonce and reject duplicates
+
+Why this matters:
+- blocks replay attacks on write routes
+- binds signature to exact route + body
+
+### 10.7 Detailed: what BlockchainAnchor does
+
+`BlockchainAnchor` is the trust/integrity record for each prescription or anchored medical source.
+
+Main fields:
+- `recordId`
+- `hash`
+- `ownerWallet`
+- `authorizedWallets`
+- `status` (`PRESCRIBED | DELIVERED | CANCELLED`)
+
+Runtime operations:
+1. `storeHash` at issuance
+2. `verifyHash` before read/claim/review decisions
+3. `grantAccess` / `revokeAccess` for owner-managed sharing
+4. `deliverPrescription` / `cancelPrescription` for lifecycle transitions
+
+Modes:
+- `mock`: persisted in Mongo (`BlockchainAnchor` model)
+- `remote`: delegated to external blockchain API while keeping same service contract
+
+Operational note:
+- if chain/mock state is reset while DB records remain, runtime may return "anchor not found" until anchors are re-synced
+
 ## 11) Smart-contract reference files
 
 - `smart-contracts/medical_event.rs`
 - `smart-contracts/ordonnance.rs`
 
+Rust crate wiring files:
+- `smart-contracts/Cargo.toml`
+- `smart-contracts/src/lib.rs`
+
 These files model expected lifecycle behavior and are used as logic references.
+The models are wired as a compilable crate and can be validated with `cargo test`.
 
 ## 12) Environment variables
 
@@ -311,8 +395,8 @@ Backend expected values (`backend/.env`):
 - `LOGIN_NONCE_TTL_SECONDS=300`
 - `REQUEST_SKEW_SECONDS=300`
 - `ADMIN_WALLETS=`
-- `BLOCKCHAIN_MODE=mock`
-- `BLOCKCHAIN_API_URL=`
+- `BLOCKCHAIN_MODE=remote`
+- `BLOCKCHAIN_API_URL=http://localhost:4600`
 - `BLOCKCHAIN_TIMEOUT_MS=8000`
 
 Frontend expected values (`frontend/.env.local`):
@@ -339,10 +423,17 @@ Frontend expected values (`frontend/.env.local`):
 - Import an account
 - Login through unified `/login` page
 
+### Smart-contract models (Rust)
+1. `cd smart-contracts`
+2. Install Rust toolchain (`rustup` + `cargo`) if missing
+3. `cargo test`
+4. `cargo run --bin blockchain_api`
+
 ## 14) Operational notes
 
 - Backend requires healthy MongoDB; if Mongo is down, API boot fails.
 - `ripgrep` (`rg`) is a dev tool for search in terminal/editor workflows, not app runtime logic.
+- `cargo` may be missing in some environments; install Rust toolchain before running smart-contract tests.
 - If camera scanning has browser issues, manual `recordId` flow still exists.
 
 ## 15) Signed headers reference

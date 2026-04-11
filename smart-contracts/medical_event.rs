@@ -63,6 +63,27 @@ impl MedicalEventContract {
         Ok(anchor.hash == expected_hash)
     }
 
+    pub fn get_anchor_status(&self, id: &str) -> Result<&PrescriptionStatus, String> {
+        let anchor = self
+            .anchors
+            .get(id)
+            .ok_or_else(|| "anchor not found".to_string())?;
+        Ok(&anchor.status)
+    }
+
+    pub fn get_anchor(&self, id: &str) -> Result<&MedicalAnchor, String> {
+        self.anchors
+            .get(id)
+            .ok_or_else(|| "anchor not found".to_string())
+    }
+
+    pub fn list_anchors(&self) -> Vec<(String, MedicalAnchor)> {
+        self.anchors
+            .iter()
+            .map(|(id, anchor)| (id.clone(), anchor.clone()))
+            .collect()
+    }
+
     pub fn grant_access(
         &mut self,
         id: &str,

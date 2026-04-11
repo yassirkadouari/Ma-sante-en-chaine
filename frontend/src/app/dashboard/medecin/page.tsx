@@ -404,7 +404,7 @@ export default function MedecinDashboard() {
                     <td className="p-4">
                       <span className={`px-2 py-1 rounded text-[10px] font-bold ${
                         item.status === "PRESCRIBED" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
-                        item.status === "USED" ? "bg-neutral-800 text-neutral-500" :
+                        (item.status === "DELIVERED" || item.status === "USED") ? "bg-neutral-800 text-neutral-500" :
                         "bg-red-500/10 text-red-500"
                       }`}>
                         {item.status}

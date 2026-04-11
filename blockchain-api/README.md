@@ -3,7 +3,7 @@
 Minimal blockchain bridge API for the backend `BLOCKCHAIN_MODE=remote` mode.
 
 This service currently runs in memory and exposes a stable `/anchors/*` contract.
-Your friend can replace internals with real chain extrinsics/events while keeping the same HTTP API.
+Your  can replace internals with real chain extrinsics/events while keeping the same HTTP API.
 
 ## Setup
 
@@ -19,7 +19,7 @@ npm install
 ```bash
 cp .env.example .env
 ```
-
+urgence
 3. Run:
 
 ```bash
@@ -48,7 +48,7 @@ In `backend/.env`:
 
 ```bash
 BLOCKCHAIN_MODE=remote
-BLOCKCHAIN_API_URL=http://localhost:4100
+BLOCKCHAIN_API_URL=http://localhost:4500
 BLOCKCHAIN_TIMEOUT_MS=8000
 ```
 

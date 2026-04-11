@@ -34,6 +34,11 @@ function createId() {
 }
 
 function computePrescriptionClaimAmount(record) {
+  const deliveredTotal = Number(record?.totalAmount || 0);
+  if (Number.isFinite(deliveredTotal) && deliveredTotal > 0) {
+    return deliveredTotal;
+  }
+
   try {
     const data = decryptJson(record.encryptedData);
     const reimbursements = Array.isArray(data?.reimbursements) ? data.reimbursements : [];

@@ -26,6 +26,7 @@ Le projet est decoupe en trois couches :
 3) /smart-contracts
    - Modeles Rust pour ancrage hash et controle d'acces.
    - Fonctions: store_hash, verify_hash, grant_access, revoke_access, is_authorized, deliver_prescription.
+   - Cables comme crate Rust compilable (Cargo).
 
 ## Concept cle
 
@@ -40,6 +41,13 @@ cd backend
 npm install
 cp .env.example .env
 npm start
+```
+
+## Lancer les modeles Rust
+
+```
+cd smart-contracts
+cargo test
 ```
 
 ## Endpoints principaux (secure)

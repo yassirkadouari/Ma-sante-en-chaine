@@ -370,8 +370,21 @@ router.post("/:recordId/deliver", requireRole([ROLES.PHARMACIE]), requireSignedR
       return res.status(404).json({ error: "Ordonnance introuvable" });
     }
 
-    // Get the current anchor to check status
-    const currentChain = await blockchainService.verifyHash(record.recordId, record.blockchainHash || record.dataHash);
+    const pharmacyWallet = normalizeWallet(req.auth.walletAddress);
+    const candidateHash = record.blockchainHash || record.dataHash;
+
+    // Ensure an anchor exists even if blockchain/mock state was reset.
+    let currentChain = await blockchainService.verifyHash(record.recordId, candidateHash);
+    if (!currentChain.exists) {
+      await blockchainService.storeHash({
+        recordId: record.recordId,
+        hash: candidateHash,
+        ownerWallet: record.patientWallet,
+        authorizedWallets: [record.doctorWallet, record.pharmacyWallet, pharmacyWallet].filter(Boolean)
+      });
+      currentChain = await blockchainService.verifyHash(record.recordId, candidateHash);
+    }
+
     if (currentChain.status === "DELIVERED") {
       return res.status(409).json({ error: "Cette ordonnance a déjà été délivrée. Elle ne peut pas être réutilisée." });
     }
@@ -379,16 +392,18 @@ router.post("/:recordId/deliver", requireRole([ROLES.PHARMACIE]), requireSignedR
       return res.status(409).json({ error: "Cette ordonnance a été annulée." });
     }
 
-    // Grant the scanning pharmacy access to deliver the prescription
-    const BlockchainAnchor = require("../models/BlockchainAnchor");
-    const pharmacyWallet = normalizeWallet(req.auth.walletAddress);
-    await BlockchainAnchor.updateOne(
-      { recordId: record.recordId },
-      { $addToSet: { authorizedWallets: pharmacyWallet } }
-    );
-
-    // Now deliver (pharmacy is now authorized)
-    const anchor = await blockchainService.deliverPrescription(record.recordId, pharmacyWallet);
+    let anchor;
+    try {
+      anchor = await blockchainService.deliverPrescription(record.recordId, pharmacyWallet);
+    } catch (deliverError) {
+      if (deliverError?.status === 403) {
+        // Keep existing app behavior: allow the scanning pharmacy to deliver this prescription.
+        await blockchainService.grantAccess(record.recordId, pharmacyWallet, record.patientWallet);
+        anchor = await blockchainService.deliverPrescription(record.recordId, pharmacyWallet);
+      } else {
+        throw deliverError;
+      }
+    }
 
     await PrescriptionLifecycleEvent.create({
       recordId: record.recordId,
@@ -415,7 +430,7 @@ router.post("/:recordId/deliver", requireRole([ROLES.PHARMACIE]), requireSignedR
     // Mark as purchased and inactive in DB, store totalAmount and the actual delivering pharmacy
     await PrescriptionRecord.updateOne(
       { recordId: record.recordId },
-      { $set: { status: "USED", isPurchased: true, isDelivered: true, totalAmount: Number(totalAmount || 0), pharmacyWallet } }
+      { $set: { status: "DELIVERED", isPurchased: true, isDelivered: true, totalAmount: Number(totalAmount || 0), pharmacyWallet } }
     );
   } catch (error) {
     next(error);

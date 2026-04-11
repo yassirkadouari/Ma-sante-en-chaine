@@ -39,8 +39,8 @@ const PrescriptionRecordSchema = new mongoose.Schema(
     blockchainHash: { type: String, index: true }, // The hash stored on the blockchain
     status: {
       type: String,
-      enum: ["ACTIVE", "USED", "EXPIRED"],
-      default: "ACTIVE"
+      enum: ["PRESCRIBED", "DELIVERED", "CANCELLED"],
+      default: "PRESCRIBED"
     },
     isPurchased: { type: Boolean, default: false },
     isDelivered: { type: Boolean, default: false },
