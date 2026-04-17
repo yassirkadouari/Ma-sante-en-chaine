@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ShieldCheck, CheckCircle2, XCircle, Landmark, Activity, User, FileSearch, Banknote, AlertCircle, Search } from "lucide-react";
-import { apiRequest } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { ShieldCheck, CheckCircle2, XCircle, Landmark, Activity, FileSearch, AlertCircle, Search } from "lucide-react";
+import { apiRequest } from "../../../lib/api";
 
 type ClaimItem = {
   claimId: string;
@@ -43,7 +43,7 @@ export default function AssuranceDashboard() {
   const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const response = await apiRequest<{ items: ClaimItem[] }>({ 
         path: `/claims?status=${statusFilter === "ALL" ? "" : statusFilter}` 
@@ -52,11 +52,11 @@ export default function AssuranceDashboard() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [statusFilter]);
 
   useEffect(() => {
     refresh();
-  }, [statusFilter]);
+  }, [refresh]);
 
   const reviewClaim = async (decision: "APPROVED" | "REJECTED") => {
     if (!targetClaim) return;

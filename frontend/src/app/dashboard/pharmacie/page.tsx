@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ClipboardCheck, ShieldAlert, QrCode, Search, CheckCircle2, Package, Activity, Info, AlertTriangle, UserSearch } from "lucide-react";
-import { apiRequest } from "@/lib/api";
+import { ShieldAlert, QrCode, Search, CheckCircle2, Package, Activity, Info, AlertTriangle, UserSearch } from "lucide-react";
+import { apiRequest } from "../../../lib/api";
 import QrScanner from "qr-scanner";
 
 type PrescriptionSummary = {
@@ -16,7 +16,14 @@ type PrescriptionSummary = {
 type PrescriptionDetails = {
   recordId: string;
   status: string;
-  data: Record<string, any>;
+  ipfsCid?: string | null;
+  contentState?: "PENDING_IPFS" | "ENCRYPTED_LOCKED" | "DECRYPTED" | "PLAIN_IPFS" | "UNAVAILABLE";
+  data: {
+    ordonnanceText?: string;
+    medications?: string;
+    instructions?: string;
+    [key: string]: any;
+  };
   blockchainHash?: string;
 };
 
@@ -52,6 +59,7 @@ export default function PharmacieDashboard() {
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
+  const [prescriptionPassphrase, setPrescriptionPassphrase] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
 
@@ -78,6 +86,112 @@ export default function PharmacieDashboard() {
     }
 
     return null;
+  };
+
+  const normalizePrescriptionRecordId = (input: string) => {
+    const initial = String(input || "").trim();
+    if (!initial) return "";
+
+    const extractFromObject = (value: unknown): string => {
+      if (!value || typeof value !== "object") return "";
+      const source = value as Record<string, unknown>;
+      const directKeys = ["recordId", "prescriptionId", "anchorId", "id", "value"];
+
+      for (const key of directKeys) {
+        const candidate = String(source[key] || "").trim();
+        if (candidate) return candidate;
+      }
+
+      const nestedKeys = ["data", "payload", "prescription", "ordonnance"];
+      for (const key of nestedKeys) {
+        const nested = extractFromObject(source[key]);
+        if (nested) return nested;
+      }
+
+      return "";
+    };
+
+    let candidate = initial;
+
+    try {
+      const parsed = JSON.parse(initial);
+      const extracted = extractFromObject(parsed);
+      if (extracted) candidate = extracted;
+    } catch {
+      // QR payload is not JSON, continue with raw text parser.
+    }
+
+    if (/^https?:\/\//i.test(candidate)) {
+      try {
+        const parsedUrl = new URL(candidate);
+        for (const key of ["recordId", "prescriptionId", "anchorId", "id"]) {
+          const queryValue = String(parsedUrl.searchParams.get(key) || "").trim();
+          if (queryValue) {
+            candidate = queryValue;
+            break;
+          }
+        }
+
+        if (candidate === initial) {
+          const pathSegments = parsedUrl.pathname
+            .split("/")
+            .map((segment) => segment.trim())
+            .filter(Boolean);
+          const recordIndex = pathSegments.findIndex((segment) =>
+            ["prescriptions", "prescription", "ordonnances", "ordonnance"].includes(segment.toLowerCase())
+          );
+          if (recordIndex >= 0 && pathSegments[recordIndex + 1]) {
+            candidate = decodeURIComponent(pathSegments[recordIndex + 1]);
+          }
+        }
+      } catch {
+        // Ignore malformed URL payloads.
+      }
+    }
+
+    try {
+      candidate = decodeURIComponent(candidate);
+    } catch {
+      // Keep original when URI decoding fails.
+    }
+
+    candidate = candidate.replace(/^['"]+|['"]+$/g, "").trim();
+    if (candidate.includes("\n")) {
+      candidate = candidate
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find(Boolean) || candidate;
+    }
+
+    const markerCandidates = [
+      "msc:prescription:",
+      "msc://prescription/",
+      "msce:prescription:",
+      "msce://prescription/",
+      "prescription://",
+      "prescription:",
+    ];
+    const lowered = candidate.toLowerCase();
+    for (const marker of markerCandidates) {
+      const markerIndex = lowered.indexOf(marker);
+      if (markerIndex >= 0) {
+        candidate = candidate.slice(markerIndex + marker.length).trim();
+        break;
+      }
+    }
+
+    const inlineKv = candidate.match(/(?:recordid|prescriptionid|anchorid|id)\s*[:=]\s*([A-Za-z0-9:_-]+)/i);
+    if (inlineKv?.[1]) {
+      candidate = inlineKv[1].trim();
+    }
+
+    candidate = candidate.replace(/^or-\s*/i, "").trim();
+    const explicitRecordId = candidate.match(/(presc:[A-Za-z0-9-]+)/i);
+    if (explicitRecordId?.[1]) {
+      candidate = explicitRecordId[1];
+    }
+
+    return candidate;
   };
 
   const startQrCamera = async () => {
@@ -123,12 +237,10 @@ export default function PharmacieDashboard() {
           const rawValue = String((result as { data?: string })?.data || "").trim();
           if (!rawValue) return;
 
-          let extractedRecordId = rawValue;
-          try {
-            const parsed = JSON.parse(rawValue);
-            extractedRecordId = String(parsed.recordId || parsed.id || rawValue).trim();
-          } catch {
-            extractedRecordId = rawValue;
+          const extractedRecordId = normalizePrescriptionRecordId(rawValue);
+          if (!extractedRecordId) {
+            setStatus({ type: "error", msg: "QR détecté mais format non reconnu (recordId introuvable)." });
+            return;
           }
 
           setRecordId(extractedRecordId);
@@ -209,12 +321,28 @@ export default function PharmacieDashboard() {
     try {
       setBusy(true);
       setStatus(null);
+      const normalizedRecordId = normalizePrescriptionRecordId(recordId);
+      if (!normalizedRecordId) {
+        throw new Error("Record ID invalide. Scannez de nouveau le QR code.");
+      }
+
+      if (normalizedRecordId !== recordId) {
+        setRecordId(normalizedRecordId);
+      }
+
+      const passphrase = prescriptionPassphrase.trim();
+      const query = passphrase ? `?passphrase=${encodeURIComponent(passphrase)}` : "";
+
       const response = await apiRequest<PrescriptionDetails>({
-        path: `/prescriptions/${recordId}/scan`,
+        path: `/prescriptions/${normalizedRecordId}${query}`,
         signed: true
       });
       setDetails(response);
-      setStatus({ type: "success", msg: "Authentification du scellé réussie via Blockchain." });
+      if (response.contentState === "ENCRYPTED_LOCKED") {
+        setStatus({ type: "info", msg: "Ordonnance chiffrée: saisissez la passphrase pour afficher les médicaments." });
+      } else {
+        setStatus({ type: "success", msg: "Ordonnance chargée et vérifiée via Blockchain." });
+      }
     } catch (error: any) {
       setStatus({ type: "error", msg: error.message });
       setDetails(null);
@@ -243,13 +371,22 @@ export default function PharmacieDashboard() {
     try {
       setBusy(true);
       setStatus(null);
-      const response = await apiRequest<{ status: string }>({
+      const normalizedRecordId = normalizePrescriptionRecordId(recordId);
+      if (!normalizedRecordId) {
+        throw new Error("Record ID invalide. Impossible de délivrer.");
+      }
+
+      if (normalizedRecordId !== recordId) {
+        setRecordId(normalizedRecordId);
+      }
+
+      await apiRequest<{ status: string }>({
         method: "POST",
-        path: `/prescriptions/${recordId}/deliver`,
+        path: `/prescriptions/${normalizedRecordId}/deliver`,
         signed: true,
-        body: { totalAmount: Number(totalAmount || 0) }
+        body: { totalAmount }
       });
-      setStatus({ type: "success", msg: `Ordonnance ${recordId.slice(0, 8)} désactivée et archivée.` });
+      setStatus({ type: "success", msg: `Ordonnance ${normalizedRecordId.slice(0, 8)} désactivée et archivée.` });
       setDetails(null);
       setRecordId("");
       setTotalAmount("");
@@ -303,12 +440,23 @@ export default function PharmacieDashboard() {
               </div>
             </div>
 
+            <div>
+              <label className="text-[10px] text-neutral-500 uppercase font-black mb-1 block">Passphrase (si ordonnance chiffrée)</label>
+              <input
+                type="password"
+                value={prescriptionPassphrase}
+                onChange={(event) => setPrescriptionPassphrase(event.target.value)}
+                placeholder="Laisser vide si non chiffrée"
+                className="w-full p-4 bg-black border border-neutral-800 rounded-2xl text-violet-300 outline-none focus:border-violet-500/50 transition-all text-sm font-mono"
+              />
+            </div>
+
             <button 
               disabled={busy || !recordId} 
               onClick={fetchDetails} 
               className="w-full py-4 bg-violet-600 hover:bg-violet-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-violet-900/20 disabled:opacity-30 text-sm flex items-center justify-center gap-2"
             >
-              {busy ? "[ VÉRIFICATION_EN_COURS... ]" : <><Activity size={18} /> VÉRIFIER_BLOCKCHAIN</>}
+              {busy ? "[ CHARGEMENT_EN_COURS... ]" : <><Activity size={18} /> CHARGER_ORDONNANCE</>}
             </button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -432,9 +580,15 @@ export default function PharmacieDashboard() {
                    
                    <div>
                       <p className="text-[10px] text-neutral-500 uppercase font-bold mb-3">Prescription Médicale (Dossier Pharmacologique)</p>
-                      <pre className="p-5 bg-neutral-950 rounded-xl border border-neutral-800 text-xs text-neutral-300 font-mono whitespace-pre-wrap leading-relaxed shadow-inner">
-                        {JSON.stringify(details.data, null, 2)}
-                      </pre>
+                      <div className="p-5 bg-neutral-950 rounded-xl border border-neutral-800 text-xs text-neutral-300 font-mono whitespace-pre-wrap leading-relaxed shadow-inner space-y-3">
+                        <p><span className="text-neutral-500">contentState:</span> {details.contentState || "N/A"}</p>
+                        <p><span className="text-neutral-500">ordonnanceText:</span> {details.data?.ordonnanceText || "N/A"}</p>
+                        <p><span className="text-neutral-500">medications:</span> {details.data?.medications || "N/A"}</p>
+                        <p><span className="text-neutral-500">instructions:</span> {details.data?.instructions || "N/A"}</p>
+                        {!details.data?.ordonnanceText && !details.data?.medications && !details.data?.instructions ? (
+                          <pre className="text-[11px] text-neutral-500">{JSON.stringify(details.data, null, 2)}</pre>
+                        ) : null}
+                      </div>
                    </div>
                 </div>
               </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Beaker, Search, Send, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Upload, UserSearch, Activity, FileText } from "lucide-react";
-import { apiRequest } from "@/lib/api";
-import { loadSession } from "@/lib/session";
-
+  import { Beaker, Search, Send, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Upload, UserSearch, Activity, FileText, ShieldCheck } from "lucide-react";
+  import { apiRequest } from "@/lib/api";
+  import { loadSession } from "@/lib/session";
+  import { uploadJsonToIpfs } from "@/lib/ipfsClient";
+  import { encryptMedicalPayload } from "@/lib/medicalCrypto";
 type PatientArchive = {
   walletAddress: string;
   summary: {
@@ -31,6 +32,8 @@ export default function LaboDashboard() {
   const [amountClaim, setAmountClaim] = useState("");
   const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
+  const [enableIpfs, setEnableIpfs] = useState(true);
 
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
@@ -48,39 +51,59 @@ export default function LaboDashboard() {
       if (!file) throw new Error("Le fichier PDF de l'analyse est obligatoire.");
       if (!patientWallet) throw new Error("Le wallet du patient est obligatoire.");
 
-      const formData = new FormData();
-      formData.append("pdf", file);
-      formData.append("payload", JSON.stringify({
-        patientWallet,
-        testType,
-        resultSummary,
-        amountClaim: amountClaim ? Number(amountClaim) : 0
-      }));
+        let documentCid: string | undefined;
+        
+        if (enableIpfs && file) {
+          if (encryptionPassphrase.trim().length < 8) {
+            throw new Error("La passphrase de chiffrement IPFS est requise et doit contenir au moins 8 caracteres.");
+          }
+          
+          const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(f);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+          });
+          
+          const pdfBase64 = await toBase64(file);
+          
+          const documentPayload = {
+            patientWallet,
+            testType,
+            resultSummary,
+            amountClaim: amountClaim ? Number(amountClaim) : 0,
+            documentData: pdfBase64,
+            fileName: file.name
+          };
 
-      const session = loadSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/labo/results`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${session?.token || ""}`
-        },
-        body: formData
-      });
+          const encrypted = await encryptMedicalPayload(documentPayload, encryptionPassphrase);
+          const uploaded = await uploadJsonToIpfs(encrypted, `labo-event-${Date.now()}.json`);
+          documentCid = uploaded.cid;
+        }
 
-      const resBody = await response.json();
-      if (!response.ok) throw new Error(resBody.error || "Échec de l'enregistrement");
+        const response = await apiRequest<{ eventId: string }>({
+          method: "POST",
+          path: "/labo/results",
+          signed: true,
+          body: {
+            patientWallet,
+            testType,
+            resultSummary,
+            amountClaim: amountClaim ? Number(amountClaim) : 0,
+            documentCid: documentCid || `pending-file:${file.name}`
+          }
+        });
 
-      setStatus({ 
-        type: "success", 
-        msg: `Résultat enregistré et ancré sur Blockchain. ID: ${resBody.eventId.slice(0, 8)}` 
-      });
-      
-      setPatientWallet("");
-      setTestType("");
-      setResultSummary("");
-      setAmountClaim("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    } catch (error: any) {
-      setStatus({ type: "error", msg: error.message });
+        setStatus({ 
+          type: "success", 
+          msg: `Résultat enregistré et ancré sur Blockchain. ID: ${response.eventId.slice(0, 8)}`         });
+
+        setPatientWallet("");
+        setTestType("");
+        setResultSummary("");
+        setAmountClaim("");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (error: any) {      setStatus({ type: "error", msg: error.message });
     } finally {
       setBusy(false);
     }
@@ -179,7 +202,29 @@ export default function LaboDashboard() {
                   <input type="file" ref={fileInputRef} accept="application/pdf" className="hidden" />
                 </label>
               </div>
-            </div>
+            </div>              {/* IPFS Network Config */}
+              <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <span className="text-[10px] text-emerald-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={enableIpfs} onChange={e => setEnableIpfs(e.target.checked)} />
+                    <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-neutral-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+                {enableIpfs && (
+                  <input
+                    type="password"
+                    placeholder="PASSPHRASE DE CHIFFREMENT HORS-LIGNE (8+ CARACTERES)"
+                    value={encryptionPassphrase}
+                    onChange={(e) => setEncryptionPassphrase(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 p-3 rounded-lg text-[10px] text-white outline-none focus:border-emerald-500/50 transition-all font-black uppercase tracking-widest placeholder:text-neutral-700"
+                  />
+                )}
+              </div>
+
 
             <div>
               <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Observations</label>

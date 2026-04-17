@@ -5,7 +5,6 @@ type UploadResult = {
 
 const DEFAULT_IPFS_API = "http://127.0.0.1:5001/api/v0";
 const DEFAULT_IPFS_GATEWAY = "https://ipfs.io/ipfs";
-const DEFAULT_PINATA_API = "https://api.pinata.cloud/pinning";
 const DEFAULT_PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs";
 
 function getIpfsApiBase(): string {
@@ -79,6 +78,22 @@ export function getGatewayUrl(cid: string): string {
 }
 
 export async function uploadJsonToIpfs(payload: unknown, fileName = "medical-record.json"): Promise<UploadResult> {
+  // Browser calls should use same-origin proxy route to avoid CORS failures.
+  if (typeof window !== "undefined") {
+    const proxyResponse = await fetch("/api/ipfs/upload-json", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ payload, fileName }),
+    });
+
+    const proxyPayload = (await proxyResponse.json()) as { cid?: string; size?: number; error?: string };
+    if (!proxyResponse.ok || !proxyPayload.cid) {
+      throw new Error(proxyPayload.error || `IPFS proxy upload failed (${proxyResponse.status}).`);
+    }
+
+    return { cid: proxyPayload.cid, size: Number(proxyPayload.size || 0) };
+  }
+
   if (isPinataApi()) {
     const response = await fetch(`${getIpfsApiBase()}/pinJSONToIPFS`, {
       method: "POST",
@@ -121,6 +136,21 @@ export async function uploadJsonToIpfs(payload: unknown, fileName = "medical-rec
 }
 
 export async function downloadJsonFromIpfs<T>(cid: string): Promise<T> {
+  if (typeof window !== "undefined") {
+    const response = await fetch("/api/ipfs/read-json", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cid }),
+    });
+
+    const payload = (await response.json()) as { payload?: T; error?: string };
+    if (!response.ok || payload.payload === undefined) {
+      throw new Error(payload.error || `IPFS proxy read failed (${response.status}).`);
+    }
+
+    return payload.payload;
+  }
+
   const response = await fetch(getGatewayUrl(cid));
   if (!response.ok) {
     throw new Error(`IPFS read failed (${response.status}).`);

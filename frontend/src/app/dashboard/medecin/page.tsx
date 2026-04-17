@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FilePlus2, ShieldCheck, FileText, UserSearch, ClipboardList, Activity, CheckCircle2, AlertCircle } from "lucide-react";
 import { uploadJsonToIpfs } from "@/lib/ipfsClient";
 import { encryptMedicalPayload, sha256HexFromObject } from "@/lib/medicalCrypto";
+import { apiRequest } from "../../../lib/api";
 import { connectWallet } from "@/lib/wallet";
 
 type PrescriptionSummary = {
@@ -14,16 +15,6 @@ type PrescriptionSummary = {
   version: number;
   status: string;
   blockchainHash?: string;
-};
-
-type AnchorApiItem = {
-  recordId: string;
-  hash: string;
-  cid: string;
-  ownerWallet: string;
-  doctorWallet: string;
-  pharmacyWallet?: string | null;
-  status: string;
 };
 
 type PatientArchive = {
@@ -47,9 +38,6 @@ type PatientArchive = {
 
 export default function MedecinDashboard() {
   const blockchainApiBase = (process.env.NEXT_PUBLIC_BLOCKCHAIN_API_URL || "http://localhost:4600").replace(/\/$/, "");
-  const hasIpfsConfigured = Boolean(
-    process.env.NEXT_PUBLIC_IPFS_API_URL && process.env.NEXT_PUBLIC_IPFS_API_TOKEN
-  );
   const [patientWallet, setPatientWallet] = useState("");
   const [pharmacyWallet, setPharmacyWallet] = useState("");
   const [items, setItems] = useState<PrescriptionSummary[]>([]);
@@ -60,6 +48,7 @@ export default function MedecinDashboard() {
   const [visitPatientWallet, setVisitPatientWallet] = useState("");
   const [visitDiagnosis, setVisitDiagnosis] = useState("");
   const [visitNotes, setVisitNotes] = useState("");
+  const [visitAmountClaim, setVisitAmountClaim] = useState("");
 
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
@@ -70,51 +59,45 @@ export default function MedecinDashboard() {
     medications: "Ex: Paracétamol 1g (3x/j)",
     instructions: "Repos complet 3 jours."
   });
-  const [enableIpfs, setEnableIpfs] = useState(hasIpfsConfigured);
+  const [enableIpfs, setEnableIpfs] = useState(true);
   const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
-      const response = await fetch(`${blockchainApiBase}/anchors`);
-      if (!response.ok) {
-        throw new Error(`Blockchain API error (${response.status})`);
-      }
-
-      const payload = (await response.json()) as { items?: AnchorApiItem[] };
-      const mapped: PrescriptionSummary[] = (payload.items || []).map((item) => ({
-        recordId: item.recordId,
-        patientWallet: item.ownerWallet,
-        pharmacyWallet: item.pharmacyWallet || null,
-        ipfsCid: item.cid || null,
-        version: 1,
-        status: item.status || "PRESCRIBED",
-        blockchainHash: item.hash,
-      }));
+        const payload = await apiRequest<{ items?: Array<PrescriptionSummary> }>({ path: "/prescriptions" });
+        const mapped: PrescriptionSummary[] = (payload.items || []).map((item) => ({
+          recordId: item.recordId,
+          patientWallet: item.patientWallet,
+          pharmacyWallet: item.pharmacyWallet || null,
+          ipfsCid: item.ipfsCid || null,
+          version: item.version || 1,
+          status: item.status || "PRESCRIBED",
+          blockchainHash: item.blockchainHash,
+        }));
 
       setItems(mapped);
     } catch (err) {
       console.error("Fetch failed", err);
     }
-  };
+    }, []);
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   const createTextPrescription = async () => {
     try {
       setBusy(true);
       setStatus(null);
 
-      if (!patientWallet) throw new Error("L'adresse wallet du patient est obligatoire.");
+      const ownerWallet = patientWallet.trim();
+      const targetPharmacyWallet = pharmacyWallet.trim();
+
+      if (!ownerWallet) throw new Error("L'adresse wallet du patient est obligatoire.");
       if (!prescData.ordonnanceText.trim()) throw new Error("Le contenu texte de l'ordonnance est obligatoire.");
 
       let ipfsMetadata: { cid: string; payloadHash: string; encryptionVersion?: string } | undefined;
       if (enableIpfs) {
-        if (!hasIpfsConfigured) {
-          throw new Error("Configuration IPFS absente. Vérifie frontend/.env.local puis redémarre npm run dev.");
-        }
-
         if (encryptionPassphrase.trim().length < 8) {
           throw new Error("La passphrase de chiffrement IPFS doit contenir au moins 8 caractères.");
         }
@@ -131,7 +114,7 @@ export default function MedecinDashboard() {
       }
 
       const { walletAddress } = await connectWallet();
-      const recordId = crypto.randomUUID();
+      const recordId = `presc:${crypto.randomUUID()}`;
       const anchorHash = ipfsMetadata?.payloadHash || (await sha256HexFromObject(prescData));
 
       const response = await fetch(`${blockchainApiBase}/anchors/store`, {
@@ -143,10 +126,10 @@ export default function MedecinDashboard() {
           recordId,
           hash: anchorHash,
           cid: ipfsMetadata?.cid || `pending:${recordId}`,
-          ownerWallet: patientWallet,
+          ownerWallet,
           doctorWallet: walletAddress,
-          pharmacyWallet: pharmacyWallet || undefined,
-          authorizedWallets: [walletAddress, pharmacyWallet || ""].filter(Boolean),
+          pharmacyWallet: targetPharmacyWallet || undefined,
+          authorizedWallets: [walletAddress, ownerWallet, targetPharmacyWallet || ""].filter(Boolean),
           timestamp: Math.floor(Date.now() / 1000)
         })
       });
@@ -161,7 +144,8 @@ export default function MedecinDashboard() {
       const responseHash = resBody.anchor?.hash || anchorHash;
       const responseCid = resBody.anchor?.cid || ipfsMetadata?.cid || null;
       const ipfsLabel = responseCid ? ` CID: ${responseCid.slice(0, 24)}...` : "";
-      setStatus({ type: "success", msg: `Ordonnance émise & ancrée! Hash: ${responseHash.slice(0, 16)}...${ipfsLabel}` });
+      const pendingLabel = responseCid?.startsWith("pending:") ? " [PENDING_IPFS]" : "";
+      setStatus({ type: "success", msg: `Ordonnance emise pour ${ownerWallet.slice(0, 12)}... Hash: ${responseHash.slice(0, 16)}...${ipfsLabel}${pendingLabel}` });
       setPatientWallet("");
       setPharmacyWallet("");
       setEncryptionPassphrase("");
@@ -179,13 +163,57 @@ export default function MedecinDashboard() {
   };
 
   const registerMedicalEvent = async () => {
-    setStatus({ type: "info", msg: "Flux dossier médical non migré en mode 100% décentralisé (Node.js supprimé)." });
+    try {
+      setBusy(true);
+      setStatus(null);
+
+      if (!visitPatientWallet.trim()) throw new Error("Wallet patient obligatoire.");
+      if (!visitDiagnosis.trim()) throw new Error("Le diagnostic est obligatoire.");
+      const parsedAmount = visitAmountClaim.trim() ? Number(visitAmountClaim) : 0;
+      if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+        throw new Error("Le montant de la visite doit etre un nombre positif.");
+      }
+
+      const response = await apiRequest<{ eventId: string }>({
+        method: "POST",
+        path: "/medical-events/visit",
+        signed: true,
+        body: {
+          patientWallet: visitPatientWallet.trim(),
+          diagnosis: visitDiagnosis,
+          notes: visitNotes,
+          amountClaim: parsedAmount
+        }
+      });
+
+      setStatus({ type: "success", msg: `Visite medicale ancree. Event: ${response.eventId.slice(0, 8)}` });
+      setVisitPatientWallet("");
+      setVisitDiagnosis("");
+      setVisitNotes("");
+      setVisitAmountClaim("");
+    } catch (error: any) {
+      setStatus({ type: "error", msg: error.message || "Erreur enregistrement visite" });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const fetchArchive = async () => {
     if (!searchWallet) return;
-    setArchive(null);
-    setStatus({ type: "info", msg: "Recherche archives non migrée sans backend. Utilise le registre blockchain pour le test." });
+    try {
+      setBusy(true);
+      setArchive(null);
+      setStatus(null);
+      const data = await apiRequest<PatientArchive>({
+        path: `/records/patient/${searchWallet.trim()}`
+      });
+      setArchive(data);
+      setStatus({ type: "success", msg: `Archive blockchain chargee pour ${searchWallet.slice(0, 10)}...` });
+    } catch (error: any) {
+      setStatus({ type: "error", msg: error.message || "Archive introuvable" });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -338,6 +366,18 @@ export default function MedecinDashboard() {
                 onChange={(event) => setVisitNotes(event.target.value)}
                 placeholder="Détails confidentiels du dossier..."
                 className="w-full min-h-[100px] p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-blue-500/50 transition-all text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Montant Visite (DH)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={visitAmountClaim}
+                onChange={(event) => setVisitAmountClaim(event.target.value)}
+                placeholder="0 = consultation gratuite"
+                className="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-blue-500/50 transition-all text-sm"
               />
             </div>
             <button

@@ -1,13 +1,14 @@
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PrescriptionStatus {
     Prescribed,
     Delivered,
     Cancelled,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MedicalAnchor {
     pub hash: String,
     pub cid: String,
@@ -29,6 +30,14 @@ impl MedicalEventContract {
         Self {
             anchors: HashMap::new(),
         }
+    }
+
+    pub fn from_anchors(anchors: HashMap<String, MedicalAnchor>) -> Self {
+        Self { anchors }
+    }
+
+    pub fn export_anchors(&self) -> HashMap<String, MedicalAnchor> {
+        self.anchors.clone()
     }
 
     pub fn store_hash(
@@ -113,8 +122,8 @@ impl MedicalEventContract {
             .get_mut(id)
             .ok_or_else(|| "anchor not found".to_string())?;
 
-        if anchor.owner != caller {
-            return Err("only owner can grant access".into());
+        if anchor.owner != caller && anchor.doctor != caller {
+            return Err("only owner or doctor can grant access".into());
         }
 
         anchor.authorized.insert(wallet);
@@ -133,8 +142,8 @@ impl MedicalEventContract {
             .get_mut(id)
             .ok_or_else(|| "anchor not found".to_string())?;
 
-        if anchor.owner != caller {
-            return Err("only owner can revoke access".into());
+        if anchor.owner != caller && anchor.doctor != caller {
+            return Err("only owner or doctor can revoke access".into());
         }
 
         anchor.authorized.remove(wallet);
@@ -148,7 +157,12 @@ impl MedicalEventContract {
             .get(id)
             .ok_or_else(|| "anchor not found".to_string())?;
 
-        Ok(anchor.owner == wallet || anchor.authorized.contains(wallet))
+        Ok(
+            anchor.owner == wallet
+                || anchor.doctor == wallet
+                || anchor.pharmacy.as_deref() == Some(wallet)
+                || anchor.authorized.contains(wallet),
+        )
     }
 
     pub fn deliver_prescription(&mut self, id: &str, caller: &str) -> Result<(), String> {
@@ -157,7 +171,11 @@ impl MedicalEventContract {
             .get_mut(id)
             .ok_or_else(|| "anchor not found".to_string())?;
 
-        if !anchor.authorized.contains(caller) && anchor.owner != caller {
+        if let Some(expected_pharmacy) = anchor.pharmacy.as_deref() {
+            if expected_pharmacy != caller {
+                return Err("forbidden: only assigned pharmacy can deliver".into());
+            }
+        } else if !anchor.authorized.contains(caller) && anchor.owner != caller && anchor.doctor != caller {
             return Err("caller not authorized".into());
         }
 
@@ -178,8 +196,8 @@ impl MedicalEventContract {
             .get_mut(id)
             .ok_or_else(|| "anchor not found".to_string())?;
 
-        if anchor.owner != caller {
-            return Err("only owner can cancel prescription".into());
+        if anchor.owner != caller && anchor.doctor != caller {
+            return Err("forbidden: only owner or doctor can cancel prescription".into());
         }
 
         if anchor.status == PrescriptionStatus::Delivered {

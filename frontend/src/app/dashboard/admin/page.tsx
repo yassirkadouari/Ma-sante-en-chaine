@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ShieldCheck, UserCog, UserMinus, CheckCircle, XCircle, MapPin, Globe } from "lucide-react";
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "../../../lib/api";
 import { loadSession } from "@/lib/session";
 
 type WalletRoleItem = {
@@ -41,6 +41,15 @@ export default function AdminDashboard() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const userRegion = String(currentUser?.region || "").trim();
+  const isGlobalAdmin = Boolean(currentUser?.isGlobalAdmin);
+  const assignableRoles = isGlobalAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter((item) => item !== "SUB_ADMIN");
+
+  useEffect(() => {
+    if (!isGlobalAdmin && userRegion) {
+      setRegion(userRegion);
+    }
+  }, [isGlobalAdmin, userRegion]);
 
   const refresh = async () => {
     const response = await apiRequest<{ items: WalletRoleItem[] }>({ path: "/admin/users" });
@@ -155,20 +164,20 @@ export default function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white tracking-tighter">
-              {currentUser?.isGlobalAdmin ? "GLOBAL_ADMIN_CONSOLE" : "REGIONAL_ADMIN_CONSOLE"}
+              {isGlobalAdmin ? "GLOBAL_ADMIN_CONSOLE" : "REGIONAL_ADMIN_CONSOLE"}
             </h1>
             <p className="text-neutral-500 text-xs flex items-center gap-1 uppercase">
               <MapPin size={12} className="text-red-400" /> 
-              Secteur: {currentUser?.isGlobalAdmin ? "Makhzen Global" : currentUser?.region || "Non défini"}
+              Secteur: {isGlobalAdmin ? "Makhzen Global" : userRegion || "Non défini"}
             </p>
           </div>
         </div>
         <div className="px-4 py-2 bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-500 rounded uppercase tracking-widest">
-          Auth_Level: {currentUser?.isGlobalAdmin ? "Lvl_0_Global" : "Lvl_1_Regional"}
+          Auth_Level: {isGlobalAdmin ? "Lvl_0_Global" : "Lvl_1_Regional"}
         </div>
       </div>
 
-      {currentUser?.isGlobalAdmin && (
+      {(currentUser?.role === "ADMIN" || currentUser?.isGlobalAdmin) && (
         <div className="bg-neutral-900/50 p-6 rounded-xl border border-neutral-800 space-y-4">
           <h2 className="font-bold text-lg text-white flex items-center gap-2 uppercase">
             <UserCog size={18} className="text-red-400" /> Assignation de Rôles
@@ -188,24 +197,30 @@ export default function AdminDashboard() {
               onChange={(event) => setRole(event.target.value)}
               className="w-full p-3 bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-lg focus:border-red-500/50 outline-none text-sm"
             >
-              {ROLE_OPTIONS.map((item) => (
+              {assignableRoles.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
               ))}
             </select>
 
-            <select
-              value={region}
-              onChange={(event) => setRegion(event.target.value)}
-              className="w-full p-3 bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-lg focus:border-red-500/50 outline-none text-sm font-black"
-            >
-              {REGIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            {isGlobalAdmin ? (
+              <select
+                value={region}
+                onChange={(event) => setRegion(event.target.value)}
+                className="w-full p-3 bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-lg focus:border-red-500/50 outline-none text-sm font-black"
+              >
+                {REGIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="w-full p-3 bg-neutral-950 border border-neutral-800 text-neutral-300 rounded-lg text-sm">
+                Région verrouillée: {userRegion || "Non définie"}
+              </div>
+            )}
           </div>
 
           {(DETAILS_ROLES.has(role) || role === "LABO") && (
@@ -283,7 +298,7 @@ export default function AdminDashboard() {
         <h2 className="font-bold text-lg mb-4 text-white flex items-center gap-2 uppercase tracking-widest">
            <Globe size={18} className="text-neutral-500" /> Registre des Utilisateurs
            <span className="text-[10px] text-neutral-500 ml-auto lowercase font-normal italic">
-             {currentUser?.isGlobalAdmin ? "Affichage de tous les secteurs" : `Secteur: ${currentUser?.region}`}
+             {isGlobalAdmin ? "Affichage de tous les secteurs" : `Secteur: ${userRegion || "Non défini"}`}
            </span>
         </h2>
         <div className="overflow-x-auto">

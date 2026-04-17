@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{Method, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -10,13 +10,17 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     env,
+    fs,
+    path::{Path as FsPath, PathBuf},
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 struct AppState {
     inner: Arc<Mutex<ServiceState>>,
+    state_file: PathBuf,
 }
 
 struct ServiceState {
@@ -25,13 +29,13 @@ struct ServiceState {
     events: Vec<ChainEvent>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AnchorMeta {
     tx_hash: String,
     block_number: u64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ChainEvent {
     event_id: String,
@@ -46,11 +50,28 @@ struct ChainEvent {
     cid: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct PersistentState {
+    anchors: HashMap<String, MedicalAnchor>,
+    meta: HashMap<String, AnchorMeta>,
+    events: Vec<ChainEvent>,
+}
+
 #[derive(Serialize)]
 struct HealthResponse {
     status: String,
     service: String,
     mode: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DebugStateResponse {
+    state_file: String,
+    state_file_exists: bool,
+    state_file_size_bytes: Option<u64>,
+    loaded_anchors: usize,
+    loaded_events: usize,
 }
 
 #[derive(Serialize)]
@@ -147,12 +168,21 @@ struct DeliverPayload {
 #[serde(rename_all = "camelCase")]
 struct CancelPayload {
     record_id: String,
+    requested_by_wallet: String,
 }
 
 #[derive(Serialize)]
 struct EventsResponse {
     items: Vec<ChainEvent>,
     count: usize,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ResolveRoleResponse {
+    wallet: String,
+    role: Option<String>,
+    source: Option<String>,
 }
 
 fn now_block_number() -> u64 {
@@ -206,6 +236,123 @@ fn map_error(err: String) -> (StatusCode, String) {
         return (StatusCode::CONFLICT, err);
     }
     (StatusCode::BAD_REQUEST, err)
+}
+
+fn normalize_role(value: &str) -> Option<String> {
+    match value.trim().to_uppercase().as_str() {
+        "DOCTOR" | "MEDECIN" | "MEDECIN_TRAITANT" => Some("MEDECIN".to_string()),
+        "PATIENT" => Some("PATIENT".to_string()),
+        "PHARMACY" | "PHARMACIE" | "PHARMACIEN" => Some("PHARMACIE".to_string()),
+        "HOSPITAL" | "HOPITAL" | "HOSPITALIER" => Some("HOPITAL".to_string()),
+        "INSURANCE" | "ASSURANCE" | "ASSUREUR" => Some("ASSURANCE".to_string()),
+        "LAB" | "LABO" | "LABORATOIRE" => Some("LABO".to_string()),
+        "ADMIN" | "SUPER_ADMIN" | "SUB_ADMIN" => Some("ADMIN".to_string()),
+        _ => None,
+    }
+}
+
+fn json_pointer_string<'a>(value: &'a serde_json::Value, pointer: &str) -> Option<&'a str> {
+    value.pointer(pointer)?.as_str()
+}
+
+async fn resolve_role(
+    State(state): State<AppState>,
+    Path(wallet): Path<String>,
+) -> Result<Json<ResolveRoleResponse>, (StatusCode, Json<ErrorResponse>)> {
+    let target_wallet = normalize_wallet(&wallet);
+    if target_wallet.is_empty() {
+        return Ok(Json(ResolveRoleResponse {
+            wallet: target_wallet,
+            role: None,
+            source: None,
+        }));
+    }
+
+    let candidates: Vec<(String, String, String)> = {
+        let guard = state.inner.lock().expect("state lock poisoned");
+        guard
+            .contract
+            .list_anchors()
+            .into_iter()
+            .filter(|(record_id, anchor)| {
+                (record_id.starts_with("mongo:walletroles:")
+                    || record_id.starts_with("mongo:walletidentities:")
+                    || record_id.starts_with("mongo:users:"))
+                    && anchor.owner == target_wallet
+                    && !anchor.cid.trim().is_empty()
+                    && !anchor.cid.starts_with("pending:")
+            })
+            .map(|(record_id, anchor)| (record_id, anchor.cid, anchor.owner))
+            .collect()
+    };
+
+    let gateway_base = env::var("IPFS_GATEWAY_URL")
+        .or_else(|_| env::var("NEXT_PUBLIC_IPFS_GATEWAY_URL"))
+        .unwrap_or_else(|_| "https://gateway.pinata.cloud/ipfs".to_string())
+        .trim_end_matches('/')
+        .to_string();
+
+    for (record_id, cid, owner_wallet) in candidates {
+        let url = format!("{}/{}", gateway_base, cid);
+        let response = match reqwest::get(url).await {
+            Ok(res) => res,
+            Err(_) => continue,
+        };
+
+        if !response.status().is_success() {
+            continue;
+        }
+
+        let payload: serde_json::Value = match response.json().await {
+            Ok(json) => json,
+            Err(_) => continue,
+        };
+
+        let role_raw = [
+            json_pointer_string(&payload, "/document/role"),
+            json_pointer_string(&payload, "/document/identity/role"),
+            json_pointer_string(&payload, "/role"),
+            json_pointer_string(&payload, "/identity/role"),
+        ]
+        .into_iter()
+        .flatten()
+        .find_map(normalize_role);
+
+        if let Some(role) = role_raw {
+            return Ok(Json(ResolveRoleResponse {
+                wallet: owner_wallet,
+                role: Some(role),
+                source: Some(record_id),
+            }));
+        }
+    }
+
+    let guard = state.inner.lock().expect("state lock poisoned");
+    let fallback = guard.contract.list_anchors();
+    let role = if fallback
+        .iter()
+        .any(|(_, anchor)| anchor.pharmacy.as_deref() == Some(target_wallet.as_str()))
+    {
+        Some("PHARMACIE".to_string())
+    } else if fallback
+        .iter()
+        .any(|(_, anchor)| anchor.doctor == target_wallet)
+    {
+        Some("MEDECIN".to_string())
+    } else if fallback
+        .iter()
+        .any(|(_, anchor)| anchor.owner == target_wallet)
+    {
+        Some("PATIENT".to_string())
+    } else {
+        None
+    };
+
+    Ok(Json(ResolveRoleResponse {
+        wallet: target_wallet,
+        role,
+        source: Some("fallback-anchors".to_string()),
+    }))
 }
 
 fn to_response(record_id: &str, anchor: &MedicalAnchor, meta: &AnchorMeta) -> AnchorResponse {
@@ -263,11 +410,82 @@ fn push_event(
     });
 }
 
+fn persist_locked(guard: &ServiceState, state_file: &FsPath) -> Result<(), String> {
+    let snapshot = PersistentState {
+        anchors: guard.contract.export_anchors(),
+        meta: guard.meta.clone(),
+        events: guard.events.clone(),
+    };
+
+    let serialized = serde_json::to_string_pretty(&snapshot)
+        .map_err(|e| format!("failed to serialize state: {}", e))?;
+
+    if let Some(parent) = state_file.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("failed to create state directory: {}", e))?;
+    }
+
+    fs::write(state_file, serialized).map_err(|e| format!("failed to write state file: {}", e))
+}
+
+fn empty_state() -> ServiceState {
+    ServiceState {
+        contract: MedicalEventContract::new(),
+        meta: HashMap::new(),
+        events: Vec::new(),
+    }
+}
+
+fn load_state(state_file: &FsPath) -> ServiceState {
+    let raw = match fs::read_to_string(state_file) {
+        Ok(content) => content,
+        Err(_) => return empty_state(),
+    };
+
+    match serde_json::from_str::<PersistentState>(&raw) {
+        Ok(parsed) => ServiceState {
+            contract: MedicalEventContract::from_anchors(parsed.anchors),
+            meta: parsed.meta,
+            events: parsed.events,
+        },
+        Err(error) => {
+            eprintln!(
+                "failed to parse persisted blockchain state ({}), starting empty",
+                error
+            );
+            empty_state()
+        }
+    }
+}
+
 async fn health() -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "ok".to_string(),
         service: "blockchain-api-rust".to_string(),
-        mode: "in-memory-rust".to_string(),
+        mode: "persistent-rust".to_string(),
+    })
+}
+
+async fn debug_state(State(state): State<AppState>) -> Json<DebugStateResponse> {
+    let guard = state.inner.lock().expect("state lock poisoned");
+    let anchors_count = guard.contract.list_anchors().len();
+    let events_count = guard.events.len();
+
+    let path_display = state
+        .state_file
+        .canonicalize()
+        .unwrap_or_else(|_| state.state_file.clone())
+        .display()
+        .to_string();
+
+    let metadata = fs::metadata(&state.state_file).ok();
+
+    Json(DebugStateResponse {
+        state_file: path_display,
+        state_file_exists: metadata.is_some(),
+        state_file_size_bytes: metadata.map(|m| m.len()),
+        loaded_anchors: anchors_count,
+        loaded_events: events_count,
     })
 }
 
@@ -431,6 +649,13 @@ async fn store(
         &anchor.cid,
     );
 
+    persist_locked(&guard, &state.state_file).map_err(|message| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: message }),
+        )
+    })?;
+
     let meta_ref = guard.meta.get(&payload.record_id).expect("meta must exist");
 
     Ok((
@@ -512,6 +737,14 @@ async fn grant(
         &anchor.hash,
         &anchor.cid,
     );
+
+    persist_locked(&guard, &state.state_file).map_err(|message| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: message }),
+        )
+    })?;
+
     let meta_ref = guard.meta.get(&payload.record_id).expect("meta must exist");
 
     Ok(Json(AnchorWrapper {
@@ -560,6 +793,14 @@ async fn revoke(
         &anchor.hash,
         &anchor.cid,
     );
+
+    persist_locked(&guard, &state.state_file).map_err(|message| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: message }),
+        )
+    })?;
+
     let meta_ref = guard.meta.get(&payload.record_id).expect("meta must exist");
 
     Ok(Json(AnchorWrapper {
@@ -618,6 +859,14 @@ async fn deliver(
         &anchor.hash,
         &anchor.cid,
     );
+
+    persist_locked(&guard, &state.state_file).map_err(|message| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: message }),
+        )
+    })?;
+
     let meta_ref = guard.meta.get(&payload.record_id).expect("meta must exist");
 
     Ok(Json(AnchorWrapper {
@@ -630,23 +879,11 @@ async fn cancel(
     Json(payload): Json<CancelPayload>,
 ) -> Result<Json<AnchorWrapper>, (StatusCode, Json<ErrorResponse>)> {
     let mut guard = state.inner.lock().expect("state lock poisoned");
-
-    let owner = guard
-        .contract
-        .get_anchor(&payload.record_id)
-        .map(|a| a.owner.clone())
-        .map_err(|_| {
-            (
-                StatusCode::NOT_FOUND,
-                Json(ErrorResponse {
-                    error: "anchor not found".to_string(),
-                }),
-            )
-        })?;
+    let caller = normalize_wallet(&payload.requested_by_wallet);
 
     guard
         .contract
-        .cancel_prescription(&payload.record_id, &owner)
+        .cancel_prescription(&payload.record_id, &caller)
         .map_err(|err| {
             let (status, message) = map_error(err);
             (
@@ -670,11 +907,19 @@ async fn cancel(
         &mut guard,
         &payload.record_id,
         "PRESCRIPTION_CANCELLED",
-        &owner,
+        &caller,
         &status_to_string(&anchor.status),
         &anchor.hash,
         &anchor.cid,
     );
+
+    persist_locked(&guard, &state.state_file).map_err(|message| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse { error: message }),
+        )
+    })?;
+
     let meta_ref = guard.meta.get(&payload.record_id).expect("meta must exist");
 
     Ok(Json(AnchorWrapper {
@@ -685,17 +930,24 @@ async fn cancel(
 #[tokio::main]
 async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "4600".to_string());
+    let state_file = env::var("BLOCKCHAIN_STATE_FILE")
+        .unwrap_or_else(|_| "data/blockchain_state.json".to_string());
+    let state_path = PathBuf::from(state_file);
 
     let state = AppState {
-        inner: Arc::new(Mutex::new(ServiceState {
-            contract: MedicalEventContract::new(),
-            meta: HashMap::new(),
-            events: Vec::new(),
-        })),
+        inner: Arc::new(Mutex::new(load_state(&state_path))),
+        state_file: state_path,
     };
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers(Any);
 
     let app = Router::new()
         .route("/health", get(health))
+        .route("/debug/state", get(debug_state))
+        .route("/resolve-role/:wallet", get(resolve_role))
         .route("/events", get(list_events))
         .route("/events/:recordId", get(list_record_events))
         .route("/anchors", get(list_anchors))
@@ -707,6 +959,7 @@ async fn main() {
         .route("/anchors/is-authorized", post(is_authorized))
         .route("/anchors/deliver", post(deliver))
         .route("/anchors/cancel", post(cancel))
+        .layer(cors)
         .with_state(state);
 
     let addr = format!("0.0.0.0:{}", port);

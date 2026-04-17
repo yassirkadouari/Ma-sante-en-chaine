@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, Database, Network, Activity } from "lucide-react";
+import { ShieldCheck, Network } from "lucide-react";
 
 export default function Home() {
   return (

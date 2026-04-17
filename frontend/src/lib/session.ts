@@ -15,6 +15,7 @@ export type Session = {
     approvalStatus?: "PENDING" | "APPROVED" | "REJECTED";
     approvedByWallet?: string | null;
     approvedAt?: string | null;
+    primaryDoctorWallet?: string | null;
   } | null;
 };
 
