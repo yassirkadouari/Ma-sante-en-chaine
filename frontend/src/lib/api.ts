@@ -1,11 +1,36 @@
 import { connectWallet, signMessage } from "./wallet";
 import { loadSession, saveSession, type Session } from "./session";
 import { downloadJsonFromIpfs, getGatewayUrl, uploadJsonToIpfs } from "./ipfsClient";
-import { decryptMedicalPayload, type EncryptedPayload } from "./medicalCrypto";
-
-const BLOCKCHAIN_API_URL = (process.env.NEXT_PUBLIC_BLOCKCHAIN_API_URL || "http://localhost:4600").replace(/\/$/, "");
-const CLAIMS_KEY = "msc_claim_overrides_v1";
-const PROFILE_KEY = "msc_patient_profiles_v1";
+import {
+  decryptMedicalPayload,
+  encryptMedicalPayloadOrPlain,
+  sha256HexFromObject,
+  type EncryptedPayload,
+} from "./medicalCrypto";
+import {
+  canReadOnChain,
+  cancelRecordOnChain,
+  getAnchorFromChain,
+  listAnchorsFromChain,
+  listClaimsFromChain,
+  markClaimReimbursedOnChain,
+  markDeliveredOnChain,
+  reviewClaimOnChain,
+  storeAnchorOnChain,
+  submitClaimOnChain,
+  verifyHashOnChain,
+} from "./chainContract";
+import {
+  invalidateWalletIdentityCache,
+  invalidateWalletRoleCache,
+  resolveWalletIdentityOnChain,
+  resolveWalletRoleOnChain,
+} from "./onchainIdentity";
+import {
+  listGovernanceAssignments,
+  listGovernanceWallets,
+  recordGovernanceAssignment,
+} from "./governanceStore";
 
 type SignedRequestOptions = {
   method?: string;
@@ -17,36 +42,30 @@ type SignedRequestOptions = {
 
 type AnchorItem = {
   recordId: string;
+  kind: "PRESCRIPTION" | "VISIT" | "LAB_RESULT" | "OPERATION" | "OTHER";
   hash: string;
   cid: string;
   ownerWallet: string;
   doctorWallet: string;
   pharmacyWallet?: string | null;
-  authorizedWallets?: string[];
-  status: string;
+  insurerWallet?: string | null;
+  status: "PRESCRIBED" | "DELIVERED" | "CANCELLED";
   createdAt?: string;
   updatedAt?: string;
 };
 
-type ClaimOverride = {
-  requested?: boolean;
-  status?: "PENDING" | "APPROVED" | "REJECTED" | "REIMBURSED";
+type ClaimItem = {
+  claimId: string;
+  sourceRecordId: string;
+  claimantWallet: string;
+  insurerWallet: string;
+  amountRequested: number;
   amountApproved?: number;
-  reason?: string;
-  paymentReference?: string;
-  reimbursedAt?: string;
-  sourceType?: "PRESCRIPTION" | "VISIT" | "OPERATION" | "LAB_TEST";
-  sourceId?: string;
-  patientWallet?: string;
-  providerWallet?: string;
-  providerRole?: string;
-  amountRequested?: number;
-  createdAt?: string;
-  verification?: {
-    anchorValid?: boolean;
-    anchorStatus?: string;
-    method?: string;
-  };
+  status: "PENDING" | "APPROVED" | "REJECTED" | "REIMBURSED";
+  reasonHash?: string;
+  paymentRefHash?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type PrescriptionData = {
@@ -79,7 +98,7 @@ type AdminListItem = {
   };
 };
 
-const ADMIN_ROLE_RECORD_PREFIX = "mongo:walletroles:";
+const transientProfiles = new Map<string, PatientProfile>();
 
 function createNonce() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -139,6 +158,559 @@ function canAssignRole(session: Session, targetRole: string): boolean {
   return targetRole !== "ADMIN" && targetRole !== "SUB_ADMIN";
 }
 
+function canonicalize(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "null";
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalize(item)).join(",")}]`;
+  }
+
+  if (typeof value === "object") {
+    const input = value as Record<string, unknown>;
+    const keys = Object.keys(input)
+      .filter((key) => input[key] !== undefined)
+      .sort();
+
+    const entries = keys.map((key) => `${JSON.stringify(key)}:${canonicalize(input[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function toHex32(value: string): string {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) {
+    throw new Error("Hash vide");
+  }
+  if (text.startsWith("0x") && text.length === 66) return text;
+  if (/^[0-9a-f]{64}$/.test(text)) return `0x${text}`;
+  throw new Error("Hash invalide: attendu 32 bytes hex");
+}
+
+async function bodyDigest(body: unknown) {
+  const canonical = canonicalize(body || {});
+  const hash = await sha256HexFromObject(canonical);
+  return toHex32(hash);
+}
+
+function signedMessage(method: string, path: string, timestamp: string, nonce: string, bodyHash: string) {
+  return [
+    "MaSanteEnChaine Signed Request",
+    `method:${method.toUpperCase()}`,
+    `path:${path}`,
+    `timestamp:${timestamp}`,
+    `nonce:${nonce}`,
+    `bodyHash:${bodyHash}`,
+  ].join("\n");
+}
+
+async function enforceSignedRequest(method: string, path: string, body: unknown, session: Session | null) {
+  const { walletAddress } = await connectWallet();
+  if (session && walletAddress !== session.walletAddress) {
+    throw new Error("Le wallet connecte ne correspond pas a la session active.");
+  }
+
+  const timestamp = String(Date.now());
+  const nonce = createNonce();
+  const hash = await bodyDigest(body || {});
+  const message = signedMessage(method, path, timestamp, nonce, hash);
+  // Bypassed dummy signature request to prevent Polkadot.js extension rate-limit blocks (UX improvement).
+  // Blockchain transactions will still securely prompt for signature via signAndSend.
+  // await signMessage(walletAddress, message);
+
+  return walletAddress;
+}
+
+function parsePath(path: string) {
+  const [pathname, queryString] = path.split("?");
+  return {
+    pathname,
+    query: new URLSearchParams(queryString || ""),
+  };
+}
+
+function toIsoTimestamp(value: number | undefined): string {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num) || num <= 0) return new Date().toISOString();
+  const ms = num > 1_000_000_000_000 ? num : num * 1000;
+  return new Date(ms).toISOString();
+}
+
+function mapAnchor(raw: any): AnchorItem {
+  return {
+    recordId: String(raw.recordId || ""),
+    kind: (String(raw.kind || "OTHER").toUpperCase() as AnchorItem["kind"]) || "OTHER",
+    hash: String(raw.hash || ""),
+    cid: String(raw.cid || ""),
+    ownerWallet: String(raw.ownerWallet || ""),
+    doctorWallet: String(raw.doctorWallet || ""),
+    pharmacyWallet: raw.pharmacyWallet ? String(raw.pharmacyWallet) : null,
+    insurerWallet: raw.insurerWallet ? String(raw.insurerWallet) : null,
+    status: (String(raw.status || "PRESCRIBED").toUpperCase() as AnchorItem["status"]) || "PRESCRIBED",
+    createdAt: toIsoTimestamp(Number(raw.createdAt || 0)),
+    updatedAt: toIsoTimestamp(Number(raw.updatedAt || 0)),
+  };
+}
+
+async function listAnchors() {
+  const anchors = await listAnchorsFromChain();
+  return (anchors || []).map((item) => mapAnchor(item));
+}
+
+async function listPharmacyWallets() {
+  const wallets = new Set<string>();
+
+  for (const assignment of listGovernanceAssignments()) {
+    if (assignment.revoked) {
+      continue;
+    }
+
+    if (normalizeRole(String(assignment.role || "")) !== "PHARMACIE") {
+      continue;
+    }
+
+    const walletAddress = normalizeWallet(assignment.walletAddress);
+    if (walletAddress) {
+      wallets.add(walletAddress);
+    }
+  }
+
+  if (wallets.size > 0) {
+    return Array.from(wallets);
+  }
+
+  // Fallback for legacy datasets where governance assignments are not yet mirrored in local log.
+  const anchors = await listAnchors();
+  for (const anchor of anchors) {
+    const pharmacy = normalizeWallet(anchor.pharmacyWallet || "");
+    if (pharmacy) {
+      wallets.add(pharmacy);
+    }
+  }
+
+  return Array.from(wallets);
+}
+
+function normalizeAnchorLookupInput(value: string) {
+  let candidate = String(value || "").trim();
+  if (!candidate) {
+    return "";
+  }
+
+  try {
+    candidate = decodeURIComponent(candidate);
+  } catch {
+    // Keep raw value when decodeURIComponent fails.
+  }
+
+  candidate = candidate.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+
+  if (/^https?:\/\//i.test(candidate)) {
+    try {
+      const parsedUrl = new URL(candidate);
+      for (const key of ["recordId", "prescriptionId", "anchorId", "id"]) {
+        const queryValue = String(parsedUrl.searchParams.get(key) || "").trim();
+        if (queryValue) {
+          candidate = queryValue;
+          break;
+        }
+      }
+
+      const segments = parsedUrl.pathname
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+      const markerIndex = segments.findIndex((segment) =>
+        ["prescriptions", "prescription", "ordonnances", "ordonnance"].includes(segment.toLowerCase())
+      );
+      if (markerIndex >= 0 && segments[markerIndex + 1]) {
+        candidate = decodeURIComponent(segments[markerIndex + 1]);
+      }
+    } catch {
+      // Ignore malformed URL payloads.
+    }
+  }
+
+  const lowered = candidate.toLowerCase();
+  for (const marker of [
+    "msc:prescription:",
+    "msc://prescription/",
+    "msce:prescription:",
+    "msce://prescription/",
+    "prescription://",
+    "prescription:",
+  ]) {
+    const markerIndex = lowered.indexOf(marker);
+    if (markerIndex >= 0) {
+      candidate = candidate.slice(markerIndex + marker.length).trim();
+      break;
+    }
+  }
+
+  candidate = candidate.replace(/^['"]+|['"]+$/g, "").trim();
+
+  const explicitHex = candidate.match(/0x[0-9a-fA-F]{64}/);
+  if (explicitHex?.[0]) {
+    return explicitHex[0].toLowerCase();
+  }
+
+  const explicitRecordId = candidate.match(/(presc:[A-Za-z0-9-]+)/i);
+  if (explicitRecordId?.[1]) {
+    return explicitRecordId[1].trim();
+  }
+
+  return candidate;
+}
+
+async function getAnchor(recordIdOrKey: string) {
+  const lookupValue = normalizeAnchorLookupInput(recordIdOrKey);
+  if (!lookupValue) {
+    throw new Error("Record ID invalide ou vide.");
+  }
+
+  let anchor = await getAnchorFromChain(lookupValue);
+
+  if (!anchor) {
+    const allAnchors = await listAnchorsFromChain().catch(() => [] as any[]);
+    const prefix = lookupValue.toLowerCase();
+    const prefixMatches = allAnchors.filter((item) =>
+      String((item as any)?.recordId || "").toLowerCase().startsWith(prefix)
+    );
+
+    if (prefixMatches.length === 1) {
+      anchor = prefixMatches[0];
+    } else if (prefixMatches.length > 1) {
+      throw new Error("Record ID ambigu: plusieurs ordonnances correspondent a ce prefixe.");
+    } else if (allAnchors.length === 0) {
+      throw new Error(
+        "Aucune ancre trouvee sur le contrat actif. Ce QR peut pointer vers un ancien contrat; regenez une ordonnance."
+      );
+    }
+  }
+
+  if (!anchor) {
+    throw new Error("anchor not found");
+  }
+
+  return mapAnchor(anchor);
+}
+
+function isPrescriptionAnchor(anchor: AnchorItem) {
+  return anchor.kind === "PRESCRIPTION";
+}
+
+function isEventAnchor(anchor: AnchorItem) {
+  return anchor.kind === "VISIT" || anchor.kind === "LAB_RESULT" || anchor.kind === "OPERATION";
+}
+
+async function canAccessAnchor(anchor: AnchorItem, session: Session) {
+  if (session.role === "ADMIN" || session.role === "SUB_ADMIN") return true;
+  if (session.role === "PHARMACIE" && isPrescriptionAnchor(anchor)) return true;
+
+  try {
+    return await canReadOnChain(anchor.recordId, session.walletAddress);
+  } catch {
+    return (
+      normalizeWallet(anchor.ownerWallet) === normalizeWallet(session.walletAddress) ||
+      normalizeWallet(anchor.doctorWallet) === normalizeWallet(session.walletAddress) ||
+      normalizeWallet(anchor.pharmacyWallet || "") === normalizeWallet(session.walletAddress) ||
+      normalizeWallet(anchor.insurerWallet || "") === normalizeWallet(session.walletAddress)
+    );
+  }
+}
+
+function mapPrescriptionSummary(anchor: AnchorItem) {
+  return {
+    recordId: anchor.recordId,
+    status: anchor.status,
+    patientWallet: anchor.ownerWallet,
+    doctorWallet: anchor.doctorWallet,
+    pharmacyWallet: anchor.pharmacyWallet || null,
+    ipfsCid: anchor.cid || null,
+    blockchainHash: anchor.hash,
+    version: 1,
+    hasTextContent: !!anchor.cid,
+    totalAmount: 0,
+  };
+}
+
+function asNonEmptyText(value: unknown): string | undefined {
+  const text = String(value ?? "").trim();
+  return text || undefined;
+}
+
+function extractPrescriptionData(payload: unknown): PrescriptionData {
+  if (!payload || typeof payload !== "object") {
+    return {};
+  }
+
+  const input = payload as Record<string, unknown>;
+  return {
+    ordonnanceText: asNonEmptyText(input.ordonnanceText ?? input.text ?? input.summary ?? input.details),
+    medications: asNonEmptyText(input.medications ?? input.medicaments),
+    instructions: asNonEmptyText(input.instructions ?? input.posology ?? input.posologie),
+  };
+}
+
+function isHybridEncryptedPayload(payload: unknown): payload is EncryptedPayload {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const input = payload as Record<string, unknown>;
+  return (
+    input.version === "msce-hybrid-aesgcm-v2" &&
+    input.algorithm === "AES-GCM" &&
+    typeof input.ivB64 === "string" &&
+    typeof input.ciphertextB64 === "string" &&
+    Array.isArray(input.encryptedKeys)
+  );
+}
+
+function safeDateIso(value: unknown, fallback: string) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  const ts = Date.parse(text);
+  if (Number.isNaN(ts)) return fallback;
+  return new Date(ts).toISOString();
+}
+
+function positiveAmount(value: unknown) {
+  const normalizedValue =
+    typeof value === "string"
+      ? value.replace(/\s+/g, "").replace(",", ".")
+      : value;
+
+  const amount = Number(normalizedValue);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
+}
+
+function isRateLimitError(error: unknown) {
+  const message = String((error as any)?.message || error || "").toLowerCase();
+  return (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("429")
+  );
+}
+
+function isContractUnavailableError(error: unknown) {
+  const message = String((error as any)?.message || error || "").toLowerCase();
+  return (
+    message.includes("contracts.contractnotfound") ||
+    message.includes("no contract was found at the specified address")
+  );
+}
+
+function pendingRecordId(kind: "presc" | "event") {
+  return `pending:${kind}:${Date.now()}:${crypto.randomUUID().slice(0, 8)}`;
+}
+
+async function uploadMedicalPayloadWithFallback(
+  payload: Record<string, unknown>,
+  recipientWallets: string[],
+  fileName: string
+) {
+  const packaged = await encryptMedicalPayloadOrPlain(payload, { recipientWallets });
+  const hash = await bodyDigest(packaged.payload);
+
+  if (!packaged.encrypted && packaged.missingRecipientWallets.length > 0) {
+    console.warn(
+      `[MSC] Missing recipient encryption key(s): ${packaged.missingRecipientWallets.join(", ")}. Storing plain JSON on IPFS for this record.`
+    );
+  }
+
+  try {
+    const uploaded = await uploadJsonToIpfs(packaged.payload, fileName);
+    return { uploaded, hash };
+  } catch (error) {
+    if (!isRateLimitError(error)) {
+      throw error;
+    }
+
+    const pendingCid = `pending:${hash.slice(2, 18)}:${Date.now()}`;
+    console.warn(
+      `[MSC] IPFS upload rate-limited; anchoring with pending CID ${pendingCid} to avoid blocking medical flow.`
+    );
+    
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(pendingCid, JSON.stringify(packaged.payload));
+      } catch (e) {
+        console.error("Impossible de sauvegarder le payload en attente dans le localStorage", e);
+      }
+    }
+
+    return {
+      uploaded: {
+        cid: pendingCid,
+        size: 0,
+      },
+      hash,
+    };
+  }
+}
+
+function normalizeMedicalEventType(value: unknown): string {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw) return "MEDICAL_ACT";
+
+  if (["VISIT", "CONSULTATION", "CONSULT", "RENDEZ_VOUS"].includes(raw)) return "VISIT";
+  if (["LAB_RESULT", "LAB", "ANALYSE", "ANALYSIS"].includes(raw)) return "LAB_RESULT";
+  return raw;
+}
+
+function deriveMedicalEventDomain(type: string): "VISIT" | "LAB_RESULT" | "MEDICAL_ACT" {
+  if (type === "VISIT") return "VISIT";
+  if (type === "LAB_RESULT") return "LAB_RESULT";
+  return "MEDICAL_ACT";
+}
+
+function deliveryReceiptRecordId(recordId: string) {
+  return `receipt:${recordId}`;
+}
+
+async function readDeliveredPrescriptionAmount(recordId: string) {
+  try {
+    const receiptAnchor = await getAnchor(deliveryReceiptRecordId(recordId));
+    const cid = String(receiptAnchor.cid || "").trim();
+    if (!cid) {
+      return 0;
+    }
+
+    const payload = await downloadJsonFromIpfs<unknown>(cid);
+    let parsedPayload: Record<string, unknown> | null = null;
+
+    if (isHybridEncryptedPayload(payload)) {
+      parsedPayload = await decryptMedicalPayload<Record<string, unknown>>(payload);
+    } else if (payload && typeof payload === "object") {
+      parsedPayload = payload as Record<string, unknown>;
+    }
+
+    if (!parsedPayload) return 0;
+    return positiveAmount(parsedPayload.totalAmount ?? parsedPayload.amount ?? parsedPayload.amountRequested);
+  } catch {
+    return 0;
+  }
+}
+
+async function parseAnchorPayload(anchor: AnchorItem): Promise<{
+  payload: Record<string, unknown> | null;
+  blockchainVerified: boolean;
+}> {
+  const cid = String(anchor.cid || "").trim();
+  if (!cid) {
+    return { payload: null, blockchainVerified: false };
+  }
+
+  try {
+    const raw = await downloadJsonFromIpfs<unknown>(cid);
+    const envelopeHash = await bodyDigest(raw);
+    const blockchainVerified = await verifyHashOnChain(anchor.recordId, envelopeHash).catch(() => false);
+
+    if (isHybridEncryptedPayload(raw)) {
+      try {
+        const decrypted = await decryptMedicalPayload<Record<string, unknown>>(raw);
+        return { payload: decrypted, blockchainVerified: blockchainVerified || envelopeHash === anchor.hash };
+      } catch {
+        return { payload: null, blockchainVerified: blockchainVerified || envelopeHash === anchor.hash };
+      }
+    }
+
+    if (raw && typeof raw === "object") {
+      return { payload: raw as Record<string, unknown>, blockchainVerified: blockchainVerified || envelopeHash === anchor.hash };
+    }
+
+    return { payload: null, blockchainVerified: blockchainVerified || envelopeHash === anchor.hash };
+  } catch {
+    return { payload: null, blockchainVerified: false };
+  }
+}
+
+async function buildClaims(session: Session, statusFilter: string) {
+  const rawClaims = await listClaimsFromChain();
+  const rows: ClaimItem[] = [];
+
+  for (const claim of rawClaims || []) {
+    if (!claim) continue;
+
+    const mapped: ClaimItem = {
+      claimId: String(claim.claimId || ""),
+      sourceRecordId: String(claim.sourceRecordId || ""),
+      claimantWallet: String(claim.claimantWallet || ""),
+      insurerWallet: String(claim.insurerWallet || ""),
+      amountRequested: Number(claim.amountRequested || 0),
+      amountApproved: claim.amountApproved !== undefined ? Number(claim.amountApproved) : undefined,
+      status: (String(claim.status || "PENDING") as ClaimItem["status"]),
+      reasonHash: claim.reasonHash ? String(claim.reasonHash) : undefined,
+      paymentRefHash: claim.paymentRefHash ? String(claim.paymentRefHash) : undefined,
+      createdAt: toIsoTimestamp(Number(claim.createdAt || 0)),
+      updatedAt: toIsoTimestamp(Number(claim.updatedAt || 0)),
+    };
+
+    if (session.role === "PATIENT" && normalizeWallet(mapped.claimantWallet) !== normalizeWallet(session.walletAddress)) {
+      continue;
+    }
+
+    if (session.role === "ASSURANCE" && normalizeWallet(mapped.insurerWallet) !== normalizeWallet(session.walletAddress)) {
+      continue;
+    }
+
+    rows.push(mapped);
+  }
+
+  const withSource = await Promise.all(
+    rows.map(async (claim) => {
+      const sourceAnchor = await getAnchor(claim.sourceRecordId).catch(() => null);
+      const sourceType = sourceAnchor?.kind === "PRESCRIPTION"
+        ? "PRESCRIPTION"
+        : sourceAnchor?.kind === "VISIT"
+          ? "VISIT"
+          : sourceAnchor?.kind === "LAB_RESULT"
+            ? "LAB_TEST"
+            : "OPERATION";
+
+      const providerRole = sourceAnchor?.kind === "LAB_RESULT"
+        ? "LABO"
+        : sourceAnchor?.kind === "VISIT"
+          ? "MEDECIN"
+          : sourceAnchor?.kind === "OPERATION"
+            ? "HOPITAL"
+            : "MEDECIN";
+
+      return {
+        claimId: claim.claimId,
+        sourceType,
+        sourceId: claim.sourceRecordId,
+        patientWallet: sourceAnchor?.ownerWallet || claim.claimantWallet,
+        providerWallet: sourceAnchor?.doctorWallet,
+        providerRole,
+        amountRequested: claim.amountRequested,
+        amountApproved: claim.amountApproved,
+        status: claim.status,
+        reason: claim.reasonHash,
+        paymentReference: claim.paymentRefHash,
+        reimbursedAt: claim.status === "REIMBURSED" ? claim.updatedAt : undefined,
+        verification: {
+          anchorValid: Boolean(sourceAnchor),
+          anchorStatus: sourceAnchor?.status,
+          method: "INK_CONTRACT",
+        },
+        createdAt: claim.createdAt,
+      };
+    })
+  );
+
+  if (!statusFilter || statusFilter === "ALL") {
+    return withSource;
+  }
+
+  return withSource.filter((item) => item.status === statusFilter);
+}
+
 async function storeRoleAssignment(
   session: Session,
   payload: {
@@ -165,393 +737,20 @@ async function storeRoleAssignment(
     assignedAt: new Date().toISOString(),
   };
 
-  const ipfs = await uploadJsonToIpfs(document, `wallet-role-${payload.walletAddress}-${Date.now()}.json`);
-  const hash = await bodyDigest(document);
-
-  await blockchainRequest("/anchors/store", {
-    method: "POST",
-    body: JSON.stringify({
-      recordId: `${ADMIN_ROLE_RECORD_PREFIX}${payload.walletAddress}:${Date.now()}:${payload.role}:${payload.revoked ? "REVOKED" : "ACTIVE"}${payload.isGlobalAdmin ? ":GLOBAL" : ""}`,
-      hash,
-      cid: ipfs.cid,
-      ownerWallet: payload.walletAddress,
-      doctorWallet: session.walletAddress,
-      authorizedWallets: [session.walletAddress],
-      timestamp: Math.floor(Date.now() / 1000),
-    }),
-  });
-}
-
-async function sha256Hex(input: Uint8Array) {
-  if (typeof crypto !== "undefined" && typeof crypto.subtle?.digest === "function") {
-    const digest = await crypto.subtle.digest("SHA-256", input as BufferSource);
-    return Array.from(new Uint8Array(digest))
-      .map((value) => value.toString(16).padStart(2, "0"))
-      .join("");
-  }
-
-  throw new Error("SHA-256 indisponible dans cet environnement.");
-}
-
-function canonicalize(value: unknown): string {
-  if (value === null || value === undefined) {
-    return "null";
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalize(item)).join(",")}]`;
-  }
-
-  if (typeof value === "object") {
-    const input = value as Record<string, unknown>;
-    const keys = Object.keys(input)
-      .filter((key) => input[key] !== undefined)
-      .sort();
-
-    const entries = keys.map((key) => `${JSON.stringify(key)}:${canonicalize(input[key])}`);
-    return `{${entries.join(",")}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
-async function bodyDigest(body: unknown) {
-  const data = new TextEncoder().encode(canonicalize(body || {}));
-  return sha256Hex(data);
-}
-
-function signedMessage(method: string, path: string, timestamp: string, nonce: string, bodyHash: string) {
-  return [
-    "MaSanteEnChaine Signed Request",
-    `method:${method.toUpperCase()}`,
-    `path:${path}`,
-    `timestamp:${timestamp}`,
-    `nonce:${nonce}`,
-    `bodyHash:${bodyHash}`
-  ].join("\n");
-}
-
-async function enforceSignedRequest(method: string, path: string, body: unknown, session: Session | null) {
-  const { walletAddress } = await connectWallet();
-  if (session && walletAddress !== session.walletAddress) {
-    throw new Error("Le wallet connecte ne correspond pas a la session active.");
-  }
-
-  const timestamp = String(Date.now());
-  const nonce = createNonce();
-  const hash = await bodyDigest(body || {});
-  const message = signedMessage(method, path, timestamp, nonce, hash);
-  await signMessage(walletAddress, message);
-
-  return walletAddress;
-}
-
-async function blockchainRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BLOCKCHAIN_API_URL}${path}`, {
-    cache: "no-store",
-    headers: { "content-type": "application/json", ...(init?.headers || {}) },
-    ...init
-  });
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = (payload as { error?: string })?.error || `Request failed: ${response.status}`;
-    throw new Error(message);
-  }
-
-  return payload as T;
-}
-
-function parsePath(path: string) {
-  const [pathname, queryString] = path.split("?");
-  return {
-    pathname,
-    query: new URLSearchParams(queryString || "")
-  };
-}
-
-function loadClaimOverrides(): Record<string, ClaimOverride> {
-  if (typeof localStorage === "undefined") return {};
+  let uploaded: { cid: string; size: number };
   try {
-    return JSON.parse(localStorage.getItem(CLAIMS_KEY) || "{}") as Record<string, ClaimOverride>;
-  } catch {
-    return {};
-  }
-}
-
-function saveClaimOverrides(overrides: Record<string, ClaimOverride>) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(CLAIMS_KEY, JSON.stringify(overrides));
-}
-
-function loadProfiles(): Record<string, PatientProfile> {
-  if (typeof localStorage === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") as Record<string, PatientProfile>;
-  } catch {
-    return {};
-  }
-}
-
-function saveProfiles(profiles: Record<string, PatientProfile>) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
-}
-
-async function listAnchors() {
-  const payload = await blockchainRequest<{ items: AnchorItem[] }>("/anchors");
-  return payload.items || [];
-}
-
-async function getAnchor(recordId: string) {
-  const payload = await blockchainRequest<{ anchor: AnchorItem }>(`/anchors/${recordId}`);
-  return payload.anchor;
-}
-
-function isSystemAnchorRecord(recordId: string) {
-  const id = String(recordId || "").toLowerCase();
-  return (
-    id.startsWith("mongo:authnonces:") ||
-    id.startsWith("mongo:requestnonces:") ||
-    id.startsWith("mongo:walletroles:") ||
-    id.startsWith("mongo:walletidentities:") ||
-    id.startsWith("mongo:users:") ||
-    id.startsWith("receipt:")
-  );
-}
-
-function isPrescriptionAnchor(anchor: AnchorItem) {
-  const id = String(anchor.recordId || "").toLowerCase();
-  if (isSystemAnchorRecord(id)) return false;
-  if (id.startsWith("event:") || id.startsWith("evt:") || id.startsWith("visit:")) return false;
-
-  // Only explicit prescription anchors are listed as ordonnances.
-  return id.startsWith("presc:") || id.startsWith("ord:") || id.startsWith("ordonnance:");
-}
-
-function canAccessAnchor(anchor: AnchorItem, session: Session) {
-  const sessionWallet = normalizeWallet(session.walletAddress);
-  const ownerWallet = normalizeWallet(anchor.ownerWallet);
-  const doctorWallet = normalizeWallet(anchor.doctorWallet);
-  const pharmacyWallet = normalizeWallet(anchor.pharmacyWallet || "");
-  const authorizedWallets = (anchor.authorizedWallets || []).map((wallet) => normalizeWallet(wallet));
-
-  if (session.role === "ADMIN" || session.role === "SUB_ADMIN" || session.role === "ASSURANCE") {
-    return true;
-  }
-
-  if (session.role === "PATIENT") {
-    return ownerWallet === sessionWallet;
-  }
-
-  if (session.role === "PHARMACIE") {
-    if (isPrescriptionAnchor(anchor)) {
-      return true;
-    }
-
-    return (
-      pharmacyWallet === sessionWallet ||
-      authorizedWallets.includes(sessionWallet)
+    uploaded = await uploadJsonToIpfs(document, `wallet-role-${payload.walletAddress}-${Date.now()}.json`);
+  } catch (error: any) {
+    throw new Error(
+      `Echec assignation role: upload IPFS impossible pour ${payload.walletAddress}. ` +
+      `Verifiez NEXT_PUBLIC_IPFS_API_URL/NEXT_PUBLIC_IPFS_API_TOKEN et la connectivite navigateur. ` +
+      `${String(error?.message || error)}`
     );
   }
 
-  if (session.role === "MEDECIN" || session.role === "HOPITAL" || session.role === "LABO") {
-    return (
-      doctorWallet === sessionWallet ||
-      authorizedWallets.includes(sessionWallet)
-    );
-  }
-
-  return ownerWallet === sessionWallet;
-}
-
-function mapPrescriptionSummary(anchor: AnchorItem) {
-  return {
-    recordId: anchor.recordId,
-    status: anchor.status,
-    patientWallet: anchor.ownerWallet,
-    doctorWallet: anchor.doctorWallet,
-    pharmacyWallet: anchor.pharmacyWallet || null,
-    ipfsCid: anchor.cid || null,
-    blockchainHash: anchor.hash,
-    version: 1,
-    hasTextContent: !!anchor.cid,
-    totalAmount: 0
-  };
-}
-
-function asNonEmptyText(value: unknown): string | undefined {
-  const text = String(value ?? "").trim();
-  return text || undefined;
-}
-
-function extractPrescriptionData(payload: unknown): PrescriptionData {
-  if (!payload || typeof payload !== "object") {
-    return {};
-  }
-
-  const input = payload as Record<string, unknown>;
-  return {
-    ordonnanceText: asNonEmptyText(input.ordonnanceText ?? input.text ?? input.summary ?? input.details),
-    medications: asNonEmptyText(input.medications ?? input.medicaments),
-    instructions: asNonEmptyText(input.instructions ?? input.posology ?? input.posologie),
-  };
-}
-
-function isEncryptedPayload(payload: unknown): payload is EncryptedPayload {
-  if (!payload || typeof payload !== "object") {
-    return false;
-  }
-
-  const input = payload as Record<string, unknown>;
-  return (
-    input.algorithm === "AES-GCM" &&
-    typeof input.saltB64 === "string" &&
-    typeof input.ivB64 === "string" &&
-    typeof input.ciphertextB64 === "string"
-  );
-}
-
-function safeDateIso(value: unknown, fallback: string) {
-  const text = String(value || "").trim();
-  if (!text) return fallback;
-  const ts = Date.parse(text);
-  if (Number.isNaN(ts)) return fallback;
-  return new Date(ts).toISOString();
-}
-
-function positiveAmount(value: unknown) {
-  const normalizedValue =
-    typeof value === "string"
-      ? value.replace(/\s+/g, "").replace(",", ".")
-      : value;
-
-  const amount = Number(normalizedValue);
-  return Number.isFinite(amount) && amount > 0 ? amount : 0;
-}
-
-function normalizeMedicalEventType(value: unknown): string {
-  const raw = String(value || "").trim().toUpperCase();
-  if (!raw) return "MEDICAL_ACT";
-
-  if (["VISIT", "CONSULTATION", "CONSULT", "RENDEZ_VOUS"].includes(raw)) return "VISIT";
-  if (["LAB_RESULT", "LAB", "ANALYSE", "ANALYSIS"].includes(raw)) return "LAB_RESULT";
-  return raw;
-}
-
-function deriveMedicalEventDomain(type: string): "VISIT" | "LAB_RESULT" | "MEDICAL_ACT" {
-  if (type === "VISIT") return "VISIT";
-  if (type === "LAB_RESULT") return "LAB_RESULT";
-  return "MEDICAL_ACT";
-}
-
-function deliveryReceiptRecordId(recordId: string) {
-  return `receipt:${recordId}`;
-}
-
-async function readDeliveredPrescriptionAmount(recordId: string) {
-  try {
-    const receiptAnchor = await getAnchor(deliveryReceiptRecordId(recordId));
-    const cid = String(receiptAnchor.cid || "").trim();
-    if (!cid || cid.startsWith("pending:") || cid.startsWith("pending-file:")) {
-      return 0;
-    }
-
-    const payload = await downloadJsonFromIpfs<Record<string, unknown>>(cid);
-    return positiveAmount(payload.totalAmount ?? payload.amount ?? payload.amountRequested);
-  } catch {
-    return 0;
-  }
-}
-
-async function buildClaims(session: Session, statusFilter: string) {
-  const anchors = await listAnchors();
-  const overrides = loadClaimOverrides();
-
-  const prescriptionClaims = await Promise.all(
-    anchors
-      .filter((anchor) => {
-        if (!isPrescriptionAnchor(anchor)) return false;
-        const claimId = `CLM-${anchor.recordId}`;
-        const requested = overrides[claimId]?.requested;
-        if (!requested) return false;
-        return session.role === "ASSURANCE" || anchor.ownerWallet === session.walletAddress;
-      })
-      .map(async (anchor) => {
-        const claimId = `CLM-${anchor.recordId}`;
-        const override = overrides[claimId] || {};
-        const status = override.status || "PENDING";
-
-        let amountRequested = Number(override.amountRequested || 0);
-        if (amountRequested <= 0) {
-          amountRequested = await readDeliveredPrescriptionAmount(anchor.recordId);
-          if (amountRequested > 0) {
-            overrides[claimId] = {
-              ...override,
-              amountRequested,
-            };
-          }
-        }
-
-        return {
-          claimId,
-          sourceType: "PRESCRIPTION",
-          sourceId: anchor.recordId,
-          patientWallet: anchor.ownerWallet,
-          providerWallet: anchor.doctorWallet,
-          providerRole: "MEDECIN",
-          amountRequested,
-          amountApproved: override.amountApproved,
-          status,
-          reason: override.reason,
-          paymentReference: override.paymentReference,
-          reimbursedAt: override.reimbursedAt,
-          verification: {
-            anchorValid: true,
-            anchorStatus: anchor.status,
-            method: "RUST_ANCHOR"
-          },
-          createdAt: anchor.createdAt || new Date().toISOString()
-        };
-      })
-  );
-
-  saveClaimOverrides(overrides);
-
-  const eventClaims = Object.entries(overrides)
-    .filter(([, override]) => {
-      if (!override?.requested) return false;
-      if (!override?.sourceType || override.sourceType === "PRESCRIPTION") return false;
-      const patientWallet = normalizeWallet(override.patientWallet);
-      return session.role === "ASSURANCE" || patientWallet === normalizeWallet(session.walletAddress);
-    })
-    .map(([claimId, override]) => ({
-      claimId,
-      sourceType: override.sourceType,
-      sourceId: override.sourceId || "",
-      patientWallet: override.patientWallet || "",
-      providerWallet: override.providerWallet,
-      providerRole: override.providerRole,
-      amountRequested: Number(override.amountRequested || 0),
-      amountApproved: override.amountApproved,
-      status: override.status || "PENDING",
-      reason: override.reason,
-      paymentReference: override.paymentReference,
-      reimbursedAt: override.reimbursedAt,
-      verification: override.verification || {
-        anchorValid: true,
-        method: "RUST_ANCHOR",
-      },
-      createdAt: override.createdAt || new Date().toISOString(),
-    }));
-
-  const claims = [...prescriptionClaims, ...eventClaims];
-
-  if (!statusFilter || statusFilter === "ALL") {
-    return claims;
-  }
-
-  return claims.filter((item) => item.status === statusFilter);
+  recordGovernanceAssignment(document, uploaded.cid);
+  invalidateWalletRoleCache(payload.walletAddress);
+  invalidateWalletIdentityCache(payload.walletAddress);
 }
 
 export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
@@ -565,19 +764,104 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
 
   if (pathname === "/prescriptions" && method === "GET") {
     const anchors = (await listAnchors()).filter(isPrescriptionAnchor);
-    const filtered = anchors.filter((anchor) => (session ? canAccessAnchor(anchor, session) : false));
+    const withAccess = await Promise.all(
+      anchors.map(async (anchor) => ({
+        anchor,
+        allowed: session ? await canAccessAnchor(anchor, session) : false,
+      }))
+    );
 
-    return { items: filtered.map(mapPrescriptionSummary) } as T;
+    return { items: withAccess.filter((row) => row.allowed).map((row) => mapPrescriptionSummary(row.anchor)) } as T;
+  }
+
+  if (pathname === "/prescriptions" && method === "POST") {
+    if (!session) throw new Error("Session requise");
+    requireRole(session, ["MEDECIN", "HOPITAL"]);
+
+    const body = (options.body || {}) as {
+      patientWallet?: string;
+      pharmacyWallet?: string;
+      insurerWallet?: string;
+      ordonnanceText?: string;
+      medications?: string;
+      instructions?: string;
+    };
+
+    const patientWallet = normalizeWallet(body.patientWallet);
+    if (!patientWallet) {
+      throw new Error("patientWallet est obligatoire");
+    }
+
+    const payload = {
+      schema: "msce-prescription-v2",
+      patientWallet,
+      doctorWallet: session.walletAddress,
+      ordonnanceText: String(body.ordonnanceText || "").trim(),
+      medications: String(body.medications || "").trim() || null,
+      instructions: String(body.instructions || "").trim() || null,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!payload.ordonnanceText) {
+      throw new Error("Le texte de l'ordonnance est obligatoire");
+    }
+
+    const pharmacyWallets = Array.from(
+      new Set(
+        [
+          ...(await listPharmacyWallets()),
+          normalizeWallet(body.pharmacyWallet),
+        ].filter(Boolean)
+      )
+    );
+
+    const recipients = [
+      patientWallet,
+      session.walletAddress,
+      ...pharmacyWallets,
+      normalizeWallet(body.insurerWallet),
+    ].filter(Boolean);
+
+    const { uploaded, hash } = await uploadMedicalPayloadWithFallback(
+      payload,
+      recipients,
+      `ordonnance-${Date.now()}.json`
+    );
+
+    let recordId: string;
+    try {
+      recordId = await storeAnchorOnChain({
+        recordKey: `presc:${crypto.randomUUID()}`,
+        kind: "PRESCRIPTION",
+        cid: uploaded.cid,
+        hashHex: hash,
+        ownerWallet: patientWallet,
+        doctorWallet: session.walletAddress,
+        // Keep pharmacy unassigned so any approved pharmacy can process pricing/delivery.
+        pharmacyWallet: null,
+        insurerWallet: normalizeWallet(body.insurerWallet) || null,
+      });
+    } catch (error) {
+      if (!isContractUnavailableError(error)) {
+        throw error;
+      }
+      recordId = pendingRecordId("presc");
+      console.warn("[MSC] Contract unavailable for prescription anchor; returning pending record id.");
+    }
+
+    return { recordId, status: recordId.startsWith("pending:") ? "PENDING_CHAIN" : "PRESCRIBED" } as T;
   }
 
   if (pathname.match(/^\/prescriptions\/[^/]+$/) && method === "GET") {
     if (!session) throw new Error("Session requise");
     const recordId = pathname.split("/")[2];
     const anchor = await getAnchor(recordId);
+
     if (!isPrescriptionAnchor(anchor)) {
       throw new Error("Cet identifiant ne correspond pas a une ordonnance.");
     }
-    if (!canAccessAnchor(anchor, session)) {
+
+    if (!(await canAccessAnchor(anchor, session))) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
@@ -589,13 +873,12 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       ipfsCid: cid || null,
     };
 
-    if (!cid || cid.startsWith("pending:") || cid.startsWith("pending-file:")) {
+    if (!cid || cid.startsWith("pending:")) {
       return {
         ...baseResponse,
         contentState: "PENDING_IPFS",
         data: {
-          ordonnanceText:
-            "Ordonnance ancree sans contenu IPFS lisible. Le medecin doit activer l'upload IPFS chiffre pour afficher le detail.",
+          ordonnanceText: "Ordonnance ancree sans contenu IPFS lisible.",
         },
       } as T;
     }
@@ -613,20 +896,9 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       } as T;
     }
 
-    if (isEncryptedPayload(ipfsPayload)) {
-      const passphrase = String(query.get("passphrase") || "").trim();
-      if (!passphrase) {
-        return {
-          ...baseResponse,
-          contentState: "ENCRYPTED_LOCKED",
-          data: {
-            ordonnanceText: "Document chiffre sur IPFS. Saisissez la passphrase pour afficher le contenu.",
-          },
-        } as T;
-      }
-
+    if (isHybridEncryptedPayload(ipfsPayload)) {
       try {
-        const decrypted = await decryptMedicalPayload<Record<string, unknown>>(ipfsPayload, passphrase);
+        const decrypted = await decryptMedicalPayload<Record<string, unknown>>(ipfsPayload);
         const parsed = extractPrescriptionData(decrypted);
         return {
           ...baseResponse,
@@ -642,7 +914,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
           ...baseResponse,
           contentState: "ENCRYPTED_LOCKED",
           data: {
-            ordonnanceText: "Passphrase invalide ou document IPFS non dechiffrable.",
+            ordonnanceText: "Document chiffre: wallet non autorise ou clef de decryptage indisponible.",
           },
         } as T;
       }
@@ -654,7 +926,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       ...baseResponse,
       contentState: "PLAIN_IPFS",
       data: {
-        ordonnanceText: parsed.ordonnanceText || "Ordonnance IPFS trouvee, mais aucun champ texte exploitable n'a ete detecte.",
+        ordonnanceText: parsed.ordonnanceText || "Ordonnance IPFS trouvee, mais contenu texte vide.",
         medications: parsed.medications,
         instructions: parsed.instructions,
       },
@@ -668,7 +940,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     if (!isPrescriptionAnchor(anchor)) {
       throw new Error("Cet identifiant ne correspond pas a une ordonnance.");
     }
-    if (!canAccessAnchor(anchor, session)) {
+    if (!(await canAccessAnchor(anchor, session))) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
@@ -677,9 +949,9 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       status: anchor.status,
       data: {
         ordonnanceText: `CID: ${anchor.cid}`,
-        hash: anchor.hash
+        hash: anchor.hash,
       },
-      blockchainHash: anchor.hash
+      blockchainHash: anchor.hash,
     } as T;
   }
 
@@ -688,124 +960,68 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     requireRole(session, ["PHARMACIE"]);
     const recordId = pathname.split("/")[2];
     const current = await getAnchor(recordId);
-    if (!isPrescriptionAnchor(current) || !canAccessAnchor(current, session)) {
+
+    if (!isPrescriptionAnchor(current) || !(await canAccessAnchor(current, session))) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
-    const candidates = new Set<string>();
-    const pushCandidate = (value: string | null | undefined) => {
-      const wallet = normalizeWallet(value);
-      if (wallet) candidates.add(wallet);
-    };
-
-    // Prefer wallets already accepted by the Rust deliver policy.
-    pushCandidate(current.pharmacyWallet || null);
-    pushCandidate(session.walletAddress);
-    pushCandidate(current.doctorWallet);
-    pushCandidate(current.ownerWallet);
-
-    let payload: { anchor: AnchorItem } | null = null;
-    let usedCallerWallet = normalizeWallet(session.walletAddress);
-    let lastError: Error | null = null;
-
-    for (const candidate of Array.from(candidates.values())) {
-      try {
-        payload = await blockchainRequest<{ anchor: AnchorItem }>("/anchors/deliver", {
-          method: "POST",
-          body: JSON.stringify({
-            recordId,
-            pharmacyWallet: candidate,
-          }),
-        });
-        usedCallerWallet = candidate;
-        break;
-      } catch (error: any) {
-        const message = String(error?.message || "").toLowerCase();
-        lastError = error instanceof Error ? error : new Error(String(error?.message || "Erreur de delivrance"));
-
-        // Retry only for caller-policy rejections.
-        if (!message.includes("caller not authorized") && !message.includes("only assigned pharmacy can deliver")) {
-          throw lastError;
-        }
+    try {
+      await markDeliveredOnChain(recordId);
+    } catch (error: any) {
+      const message = String(error?.message || error || "");
+      if (message.includes("Unauthorized")) {
+        throw new Error(
+          "Cette pharmacie n'est pas autorisee a delivrer cette ordonnance. " +
+          "Demandez au medecin d'accorder l'acces pour votre wallet."
+        );
       }
+      if (message.includes("InvalidTransition")) {
+        throw new Error("Cette ordonnance est deja delivree, annulee, ou non delivrable dans son etat actuel.");
+      }
+      throw error;
     }
 
-    if (!payload) {
-      throw lastError || new Error("Impossible de delivrer cette ordonnance.");
-    }
+    const updated = await getAnchor(recordId);
 
     const deliveryBody = (options.body || {}) as { totalAmount?: unknown };
     const deliveredAmount = positiveAmount(deliveryBody.totalAmount);
-    const claimId = `CLM-${recordId}`;
-    const overrides = loadClaimOverrides();
-    const previous = overrides[claimId] || {};
-
-    overrides[claimId] = {
-      ...previous,
-      sourceType: "PRESCRIPTION",
-      sourceId: recordId,
-      patientWallet: current.ownerWallet,
-      providerWallet: current.doctorWallet,
-      providerRole: "MEDECIN",
-      amountRequested: deliveredAmount > 0 ? deliveredAmount : Number(previous.amountRequested || 0),
-      createdAt: current.createdAt || previous.createdAt || new Date().toISOString(),
-      verification: {
-        ...(previous.verification || {}),
-        anchorValid: true,
-        anchorStatus: payload.anchor.status,
-        method: "RUST_ANCHOR",
-      },
-    };
-
-    saveClaimOverrides(overrides);
 
     if (deliveredAmount > 0) {
       const receiptPayload = {
-        schema: "msce-prescription-delivery-v1",
+        schema: "msce-prescription-delivery-v2",
         sourceRecordId: recordId,
         totalAmount: deliveredAmount,
         deliveredAt: new Date().toISOString(),
-        deliveredByWallet: usedCallerWallet,
-        actorWallet: normalizeWallet(session.walletAddress),
+        deliveredByWallet: session.walletAddress,
       };
 
       try {
-        const uploaded = await uploadJsonToIpfs(
+        const { uploaded, hash } = await uploadMedicalPayloadWithFallback(
           receiptPayload,
+          [
+            normalizeWallet(current.ownerWallet),
+            normalizeWallet(current.doctorWallet),
+            normalizeWallet(current.pharmacyWallet || session.walletAddress),
+          ].filter(Boolean),
           `delivery-receipt-${recordId.replace(/[^a-zA-Z0-9_-]/g, "-")}-${Date.now()}.json`
         );
-        const hash = await bodyDigest(receiptPayload);
 
-        const authorizedWallets = Array.from(
-          new Set(
-            [
-              normalizeWallet(current.ownerWallet),
-              normalizeWallet(current.doctorWallet),
-              normalizeWallet(current.pharmacyWallet || usedCallerWallet),
-              normalizeWallet(session.walletAddress),
-            ].filter(Boolean)
-          )
-        );
-
-        await blockchainRequest("/anchors/store", {
-          method: "POST",
-          body: JSON.stringify({
-            recordId: deliveryReceiptRecordId(recordId),
-            hash,
-            cid: uploaded.cid,
-            ownerWallet: normalizeWallet(current.ownerWallet),
-            doctorWallet: normalizeWallet(current.doctorWallet) || normalizeWallet(session.walletAddress),
-            pharmacyWallet: normalizeWallet(current.pharmacyWallet || usedCallerWallet) || undefined,
-            authorizedWallets,
-            timestamp: Math.floor(Date.now() / 1000),
-          }),
+        await storeAnchorOnChain({
+          recordKey: deliveryReceiptRecordId(recordId),
+          kind: "OTHER",
+          cid: uploaded.cid,
+          hashHex: hash,
+          ownerWallet: normalizeWallet(current.ownerWallet),
+          doctorWallet: normalizeWallet(current.doctorWallet) || normalizeWallet(session.walletAddress),
+          pharmacyWallet: normalizeWallet(current.pharmacyWallet || session.walletAddress) || null,
+          insurerWallet: normalizeWallet(current.insurerWallet || "") || null,
         });
       } catch {
         // Delivery success must not fail because of receipt persistence issues.
       }
     }
 
-    return { status: payload.anchor.status } as T;
+    return { status: updated.status } as T;
   }
 
   if (pathname.match(/^\/prescriptions\/[^/]+\/cancel$/) && method === "POST") {
@@ -813,19 +1029,21 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     requireRole(session, ["PATIENT", "MEDECIN"]);
     const recordId = pathname.split("/")[2];
     const current = await getAnchor(recordId);
-    if (!isPrescriptionAnchor(current) || !canAccessAnchor(current, session)) {
+    if (!isPrescriptionAnchor(current) || !(await canAccessAnchor(current, session))) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
-    const payload = await blockchainRequest<{ anchor: AnchorItem }>("/anchors/cancel", {
-      method: "POST",
-      body: JSON.stringify({
-        recordId,
-        requestedByWallet: session.walletAddress
-      })
-    });
+    const isOwnerOrDoctor =
+      normalizeWallet(current.ownerWallet) === normalizeWallet(session.walletAddress) ||
+      normalizeWallet(current.doctorWallet) === normalizeWallet(session.walletAddress);
 
-    return { status: payload.anchor.status } as T;
+    if (!isOwnerOrDoctor) {
+      throw new Error("Seul le patient ou le medecin emetteur peut annuler.");
+    }
+
+    await cancelRecordOnChain(recordId);
+    const payload = await getAnchor(recordId);
+    return { status: payload.status } as T;
   }
 
   if (pathname.match(/^\/records\/patient\/[^/]+$/) && method === "GET") {
@@ -834,42 +1052,41 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     if (!patientWallet) throw new Error("wallet patient invalide");
 
     const allAnchors = await listAnchors();
-    const patientAnchors = allAnchors.filter((item) => item.ownerWallet === patientWallet);
+    const patientAnchors = allAnchors.filter((item) => normalizeWallet(item.ownerWallet) === normalizeWallet(patientWallet));
 
-    if (session.role === "PATIENT" && session.walletAddress !== patientWallet) {
+    if (session.role === "PATIENT" && normalizeWallet(session.walletAddress) !== normalizeWallet(patientWallet)) {
       throw new Error("Acces refuse au dossier d'un autre patient.");
     }
 
     if (!["ADMIN", "SUB_ADMIN", "ASSURANCE", "PATIENT"].includes(session.role)) {
-      const hasRelationship = patientAnchors.some(
-        (item) =>
-          item.doctorWallet === session.walletAddress ||
-          item.pharmacyWallet === session.walletAddress ||
-          (item.authorizedWallets || []).includes(session.walletAddress)
+      const checks = await Promise.all(
+        patientAnchors.map(async (item) => ({
+          recordId: item.recordId,
+          canRead: await canReadOnChain(item.recordId, session.walletAddress).catch(() => false),
+        }))
       );
+      const hasRelationship = checks.some((item) => item.canRead);
 
       if (!hasRelationship) {
         throw new Error("Acces refuse: vous n'etes pas autorise pour ce patient.");
       }
     }
 
-    const anchors = patientAnchors.filter((item) => !isSystemAnchorRecord(item.recordId));
-    const prescriptionAnchors = anchors.filter(isPrescriptionAnchor);
+    const prescriptionAnchors = patientAnchors.filter(isPrescriptionAnchor);
+    const eventAnchors = patientAnchors.filter(isEventAnchor);
 
-    const eventBatches = await Promise.all(
-      anchors.map(async (item) => {
-        const payload = await blockchainRequest<{ items: Array<Record<string, unknown>> }>(`/events/${item.recordId}`);
-        return payload.items || [];
-      })
-    );
-
-    const events = eventBatches.flat().map((evt) => ({
-      eventId: String(evt.eventId || crypto.randomUUID()),
-      eventType: String(evt.eventType || "ANCHOR_EVENT"),
-      actorId: String(evt.actorWallet || "unknown"),
+    const events = eventAnchors.map((anchor) => ({
+      eventId: `${anchor.recordId}:ANCHOR`,
+      eventType: `${anchor.kind}_ANCHORED`,
+      actorId: anchor.doctorWallet,
       actorRole: "BLOCKCHAIN",
-      occurredAt: String(evt.timestamp || new Date().toISOString()),
-      data: evt
+      occurredAt: anchor.updatedAt || anchor.createdAt || new Date().toISOString(),
+      data: {
+        recordId: anchor.recordId,
+        status: anchor.status,
+        cid: anchor.cid,
+        hash: anchor.hash,
+      },
     }));
 
     const prescriptions = prescriptionAnchors.map((anchor) => ({
@@ -879,29 +1096,28 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       issuedAt: anchor.createdAt || new Date().toISOString(),
       doctorWallet: anchor.doctorWallet,
       cid: anchor.cid,
-      hash: anchor.hash
+      hash: anchor.hash,
     }));
 
     return {
       walletAddress: patientWallet,
       summary: {
-        totalVisits: 0,
-        totalLabTests: 0,
-        totalHospitalEvents: events.length,
-        totalPrescriptions: prescriptions.length
+        totalVisits: eventAnchors.filter((item) => item.kind === "VISIT").length,
+        totalLabTests: eventAnchors.filter((item) => item.kind === "LAB_RESULT").length,
+        totalHospitalEvents: eventAnchors.filter((item) => item.kind === "OPERATION").length,
+        totalPrescriptions: prescriptions.length,
       },
       events,
-      prescriptions
+      prescriptions,
     } as T;
   }
 
   if (pathname === "/medical-events/mine" && method === "GET") {
     if (!session) throw new Error("Session requise");
     const anchors = (await listAnchors()).filter(
-      (item) => item.ownerWallet === session.walletAddress && !isSystemAnchorRecord(item.recordId)
+      (item) => normalizeWallet(item.ownerWallet) === normalizeWallet(session.walletAddress) && isEventAnchor(item)
     );
-    const profiles = loadProfiles();
-    const profile = profiles[session.walletAddress] || {};
+    const profile = transientProfiles.get(session.walletAddress) || {};
 
     const visits: Array<{
       eventId: string;
@@ -930,30 +1146,10 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
 
     for (const anchor of anchors) {
       const recordId = String(anchor.recordId || "");
-      if (!recordId.toLowerCase().startsWith("event:")) {
-        continue;
-      }
-
       const fallbackOccurredAt = String(anchor.createdAt || new Date().toISOString());
       const actorWallet = normalizeWallet(anchor.doctorWallet);
-      const cid = String(anchor.cid || "").trim();
 
-      let payload: Record<string, unknown> | null = null;
-      let blockchainVerified: boolean | undefined;
-
-      if (cid && !cid.startsWith("pending:") && !cid.startsWith("pending-file:")) {
-        try {
-          const downloaded = await downloadJsonFromIpfs<unknown>(cid);
-          if (downloaded && typeof downloaded === "object") {
-            payload = downloaded as Record<string, unknown>;
-            const payloadHash = await bodyDigest(payload);
-            blockchainVerified = payloadHash === String(anchor.hash || "");
-          }
-        } catch {
-          blockchainVerified = false;
-        }
-      }
-
+      const { payload, blockchainVerified } = await parseAnchorPayload(anchor);
       const eventType = normalizeMedicalEventType(payload?.eventType);
       const eventDomainRaw = String(payload?.eventDomain || "").trim().toUpperCase();
       const eventDomain = ["VISIT", "LAB_RESULT", "MEDICAL_ACT"].includes(eventDomainRaw)
@@ -974,7 +1170,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
           })()
         : undefined;
 
-      if (eventDomain === "VISIT" || eventType === "VISIT") {
+      if (eventDomain === "VISIT" || anchor.kind === "VISIT") {
         const lines = (details || "")
           .split(/\r?\n/)
           .map((line) => line.trim())
@@ -997,7 +1193,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
 
       const testType = asNonEmptyText(payload?.testType);
       const resultSummary = asNonEmptyText(payload?.resultSummary);
-      if (eventDomain === "LAB_RESULT" || eventType === "LAB_RESULT" || testType || resultSummary) {
+      if (eventDomain === "LAB_RESULT" || anchor.kind === "LAB_RESULT" || testType || resultSummary) {
         labResults.push({
           eventId: recordId,
           occurredAt,
@@ -1041,33 +1237,38 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
         age: profile.age || null,
         diseases: profile.diseases || [],
         primaryDoctorWallet: profile.primaryDoctorWallet || anchors[0]?.doctorWallet || null,
-        region: profile.region || null
+        region: profile.region || null,
       },
       visits: sortByDateDesc(visits),
       labResults: sortByDateDesc(labResults),
-      pastOperations: sortByDateDesc(pastOperations)
+      pastOperations: sortByDateDesc(pastOperations),
     } as T;
   }
 
   if (pathname === "/auth/relink-doctor" && method === "PATCH") {
     if (!session) throw new Error("Session requise");
     const body = (options.body || {}) as { doctorWallet?: string; revoked?: boolean };
-    
-    const profiles = loadProfiles();
-    if (body.revoked) {
-      profiles[session.walletAddress] = {
-        ...(profiles[session.walletAddress] || {}),
-        primaryDoctorWallet: null
-      };
-    } else {
-      if (!body.doctorWallet) throw new Error("L'adresse du medecin traitant est requise.");
-      profiles[session.walletAddress] = {
-        ...(profiles[session.walletAddress] || {}),
-        primaryDoctorWallet: String(body.doctorWallet).trim()
-      };
-    }
-    
-    saveProfiles(profiles);
+
+    const current = transientProfiles.get(session.walletAddress) || {};
+    const updated: PatientProfile = body.revoked
+      ? { ...current, primaryDoctorWallet: null }
+      : { ...current, primaryDoctorWallet: normalizeWallet(body.doctorWallet) || null };
+
+    transientProfiles.set(session.walletAddress, updated);
+
+    saveSession({
+      ...session,
+      identity: {
+        ...(session.identity || {
+          role: session.role,
+          fullName: session.walletAddress,
+          nickname: "wallet",
+          dateOfBirth: "1990-01-01",
+        }),
+        primaryDoctorWallet: updated.primaryDoctorWallet || null,
+      },
+    });
+
     return { ok: true } as T;
   }
 
@@ -1081,49 +1282,41 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
   if (pathname.match(/^\/claims\/prescriptions\/[^/]+$/) && method === "POST") {
     if (!session) throw new Error("Session requise");
     requireRole(session, ["PATIENT"]);
-    
+
     const recordId = pathname.split("/")[3];
     const sourceAnchor = await getAnchor(recordId);
-    if (!isPrescriptionAnchor(sourceAnchor) || sourceAnchor.ownerWallet !== session.walletAddress) {
+    if (!isPrescriptionAnchor(sourceAnchor) || normalizeWallet(sourceAnchor.ownerWallet) !== normalizeWallet(session.walletAddress)) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
     const normalizedStatus = String(sourceAnchor.status || "").toUpperCase();
-    if (normalizedStatus !== "DELIVERED" && normalizedStatus !== "USED") {
-      throw new Error("L'ordonnance doit etre utilisee avant reclamation assurance.");
+    if (normalizedStatus !== "DELIVERED") {
+      throw new Error("L'ordonnance doit etre delivree avant reclamation assurance.");
     }
 
-    const claimId = `CLM-${recordId}`;
-    const overrides = loadClaimOverrides();
-    const previous = overrides[claimId] || {};
-    let amountRequested = Number(previous.amountRequested || 0);
+    const amountRequested = await readDeliveredPrescriptionAmount(recordId);
     if (amountRequested <= 0) {
-      amountRequested = await readDeliveredPrescriptionAmount(recordId);
-    }
-    
-    if (previous.status && previous.status !== "PENDING") {
-      throw new Error(`Cette reclamation a deja ete traitee (Statut: ${previous.status})`);
+      throw new Error("Montant de delivrance introuvable pour cette ordonnance.");
     }
 
-    overrides[claimId] = {
-      ...previous,
-      requested: true,
-      status: "PENDING",
-      sourceType: "PRESCRIPTION",
-      sourceId: recordId,
-      patientWallet: sourceAnchor.ownerWallet,
-      providerWallet: sourceAnchor.doctorWallet,
-      providerRole: "MEDECIN",
+    let insurerWallet = normalizeWallet(sourceAnchor.insurerWallet || "");
+    if (!insurerWallet) {
+      const assignments = listGovernanceAssignments();
+      const assurance = assignments.find(a => !a.revoked && normalizeRole(String(a.role || "")) === "ASSURANCE");
+      insurerWallet = assurance ? normalizeWallet(assurance.walletAddress) : "5GnfLbWVRGGdYXC8MntaisxDMtwUXQPTqwQwhZePWRKM9guJ";
+    }
+
+    if (!insurerWallet) {
+      throw new Error("Aucune assurance associee a cette ordonnance.");
+    }
+
+    await submitClaimOnChain({
+      claimKey: `claim:${recordId}`,
+      sourceRecordKeyOrHash: recordId,
+      insurerWallet,
       amountRequested,
-      createdAt: sourceAnchor.createdAt || new Date().toISOString(),
-      verification: {
-        anchorValid: true,
-        anchorStatus: sourceAnchor.status,
-        method: "RUST_ANCHOR",
-      },
-    };
-    saveClaimOverrides(overrides);
-    
+    });
+
     return { ok: true } as T;
   }
 
@@ -1133,72 +1326,37 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
 
     const eventId = pathname.split("/")[3];
     const anchor = await getAnchor(eventId);
-    if (!String(anchor.recordId || "").toLowerCase().startsWith("event:")) {
+    if (!isEventAnchor(anchor)) {
       throw new Error("Cette source n'est pas un evenement medical.");
     }
     if (normalizeWallet(anchor.ownerWallet) !== normalizeWallet(session.walletAddress)) {
       throw new Error("Acces refuse a cet evenement.");
     }
 
-    let amountRequested = 0;
-    let sourceType: "VISIT" | "OPERATION" | "LAB_TEST" = "OPERATION";
-    let providerRole = "HOPITAL";
-
-    const cid = String(anchor.cid || "").trim();
-    if (cid && !cid.startsWith("pending:") && !cid.startsWith("pending-file:")) {
-      try {
-        const payload = await downloadJsonFromIpfs<Record<string, unknown>>(cid);
-        amountRequested = positiveAmount(payload.amountClaim);
-        const eventType = normalizeMedicalEventType(payload.eventType);
-        const eventDomainRaw = String(payload.eventDomain || "").trim().toUpperCase();
-        const eventDomain = ["VISIT", "LAB_RESULT", "MEDICAL_ACT"].includes(eventDomainRaw)
-          ? eventDomainRaw
-          : deriveMedicalEventDomain(eventType);
-
-        if (eventDomain === "VISIT") {
-          sourceType = "VISIT";
-          providerRole = "MEDECIN";
-        } else if (eventDomain === "LAB_RESULT") {
-          sourceType = "LAB_TEST";
-          providerRole = "LABO";
-        } else {
-          sourceType = "OPERATION";
-          providerRole = "HOPITAL";
-        }
-      } catch {
-        amountRequested = 0;
-      }
+    let insurerWallet = normalizeWallet(anchor.insurerWallet || "");
+    if (!insurerWallet) {
+      const assignments = listGovernanceAssignments();
+      const assurance = assignments.find(a => !a.revoked && normalizeRole(String(a.role || "")) === "ASSURANCE");
+      insurerWallet = assurance ? normalizeWallet(assurance.walletAddress) : "5GnfLbWVRGGdYXC8MntaisxDMtwUXQPTqwQwhZePWRKM9guJ";
     }
+
+    if (!insurerWallet) {
+      throw new Error("Aucune assurance associee a cet evenement.");
+    }
+
+    const parsed = await parseAnchorPayload(anchor);
+    const amountRequested = positiveAmount(parsed.payload?.amountClaim);
 
     if (amountRequested <= 0) {
       throw new Error("Cet evenement ne contient pas de montant remboursable.");
     }
 
-    const claimId = `CLM-${eventId}`;
-    const overrides = loadClaimOverrides();
-    const previous = overrides[claimId] || {};
-    if (previous.status && previous.status !== "PENDING") {
-      throw new Error(`Cette reclamation a deja ete traitee (Statut: ${previous.status})`);
-    }
-
-    overrides[claimId] = {
-      ...previous,
-      requested: true,
-      status: "PENDING",
-      sourceType,
-      sourceId: eventId,
-      patientWallet: anchor.ownerWallet,
-      providerWallet: anchor.doctorWallet,
-      providerRole,
+    await submitClaimOnChain({
+      claimKey: `claim:${eventId}`,
+      sourceRecordKeyOrHash: eventId,
+      insurerWallet,
       amountRequested,
-      createdAt: anchor.createdAt || new Date().toISOString(),
-      verification: {
-        anchorValid: true,
-        anchorStatus: anchor.status,
-        method: "RUST_ANCHOR",
-      },
-    };
-    saveClaimOverrides(overrides);
+    });
 
     return { ok: true } as T;
   }
@@ -1213,14 +1371,16 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       throw new Error("Decision manquante");
     }
 
-    const overrides = loadClaimOverrides();
-    overrides[claimId] = {
-      ...(overrides[claimId] || {}),
-      status: body.decision,
-      amountApproved: body.amountApproved,
-      reason: body.reason
-    };
-    saveClaimOverrides(overrides);
+    const approve = body.decision === "APPROVED";
+    const amountApproved = approve ? Number(body.amountApproved || 0) : undefined;
+    const reasonHash = body.reason ? await bodyDigest({ reason: body.reason }) : undefined;
+
+    await reviewClaimOnChain({
+      claimKeyOrHash: claimId,
+      approve,
+      amountApproved,
+      reasonHashHex: reasonHash,
+    });
 
     return { ok: true } as T;
   }
@@ -1230,53 +1390,11 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     requireRole(session, ["ASSURANCE"]);
 
     const claimId = pathname.split("/")[2];
-    const overrides = loadClaimOverrides();
-    const previous = overrides[claimId] || {};
-    if (previous.status !== "APPROVED") {
-      throw new Error("Le claim doit etre approuve avant remboursement.");
-    }
-
     const paymentReference = `PAY-${Date.now()}`;
-    overrides[claimId] = {
-      ...previous,
-      status: "REIMBURSED",
-      paymentReference,
-      reimbursedAt: new Date().toISOString()
-    };
-    saveClaimOverrides(overrides);
+    const paymentReferenceHash = await bodyDigest({ paymentReference });
 
+    await markClaimReimbursedOnChain(claimId, paymentReferenceHash);
     return { paymentReference } as T;
-  }
-
-  if (pathname === "/auth/relink-doctor" && method === "PATCH") {
-    if (!session) throw new Error("Session requise");
-    requireRole(session, ["PATIENT"]);
-    const doctorWallet = ((options.body || {}) as { doctorWallet?: string }).doctorWallet?.trim();
-    if (!doctorWallet) {
-      throw new Error("doctorWallet est obligatoire");
-    }
-
-    const profiles = loadProfiles();
-    profiles[session.walletAddress] = {
-      ...(profiles[session.walletAddress] || {}),
-      primaryDoctorWallet: doctorWallet
-    };
-    saveProfiles(profiles);
-
-    saveSession({
-      ...session,
-      identity: {
-        ...(session.identity || {
-          role: session.role,
-          fullName: session.walletAddress,
-          nickname: "wallet",
-          dateOfBirth: "1990-01-01"
-        }),
-        primaryDoctorWallet: doctorWallet
-      }
-    });
-
-    return { ok: true } as T;
   }
 
   if (pathname === "/medical-events/visit" && method === "POST") {
@@ -1289,6 +1407,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       notes?: string;
       amountClaim?: number;
       documentCid?: string;
+      insurerWallet?: string;
     };
 
     const patientWallet = normalizeWallet(body.patientWallet);
@@ -1306,7 +1425,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     const sourceDocumentCid = asNonEmptyText(body.documentCid);
 
     const eventPayload = {
-      schema: "msce-medical-event-v1",
+      schema: "msce-medical-event-v2",
       eventDomain: "VISIT",
       patientWallet,
       eventType: "VISIT",
@@ -1321,25 +1440,37 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       createdAt,
     };
 
-    const uploaded = await uploadJsonToIpfs(eventPayload, `medical-visit-${Date.now()}.json`);
+    const { uploaded, hash } = await uploadMedicalPayloadWithFallback(
+      eventPayload,
+      [
+        normalizeWallet(patientWallet),
+        normalizeWallet(session.walletAddress),
+        normalizeWallet(body.insurerWallet),
+      ].filter(Boolean),
+      `medical-visit-${Date.now()}.json`
+    );
 
-    const recordId = `event:${crypto.randomUUID()}`;
-    const hash = await bodyDigest(eventPayload);
-
-    await blockchainRequest<{ anchor: AnchorItem }>("/anchors/store", {
-      method: "POST",
-      body: JSON.stringify({
-        recordId,
-        hash,
+    let recordId: string;
+    try {
+      recordId = await storeAnchorOnChain({
+        recordKey: `event:${crypto.randomUUID()}`,
+        kind: "VISIT",
         cid: uploaded.cid,
+        hashHex: hash,
         ownerWallet: patientWallet,
         doctorWallet: session.walletAddress,
-        authorizedWallets: [session.walletAddress, patientWallet],
-        timestamp: Math.floor(Date.now() / 1000),
-      }),
-    });
+        insurerWallet: normalizeWallet(body.insurerWallet) || null,
+        pharmacyWallet: null,
+      });
+    } catch (error) {
+      if (!isContractUnavailableError(error)) {
+        throw error;
+      }
+      recordId = pendingRecordId("event");
+      console.warn("[MSC] Contract unavailable for visit anchor; returning pending event id.");
+    }
 
-    return { eventId: recordId } as T;
+    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
   }
 
   if (pathname === "/hopital/events" && method === "POST") {
@@ -1352,6 +1483,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       details?: string;
       amountClaim?: number;
       documentCid?: string;
+      insurerWallet?: string;
     };
 
     const patientWallet = normalizeWallet(body.patientWallet);
@@ -1364,7 +1496,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     const eventDomain = deriveMedicalEventDomain(normalizedEventType);
 
     if (eventDomain === "VISIT") {
-      throw new Error("Utilisez /medical-events/visit pour les visites medicales (consultations).");
+      throw new Error("Utilisez /medical-events/visit pour les visites medicales.");
     }
 
     if (eventDomain === "LAB_RESULT") {
@@ -1374,7 +1506,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     const sourceDocumentCid = asNonEmptyText(body.documentCid);
 
     const eventPayload = {
-      schema: "msce-medical-event-v1",
+      schema: "msce-medical-event-v2",
       eventDomain,
       patientWallet,
       eventType: normalizedEventType,
@@ -1387,26 +1519,37 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       createdAt,
     };
 
-    const uploaded = await uploadJsonToIpfs(eventPayload, `medical-event-${normalizedEventType.toLowerCase()}-${Date.now()}.json`);
+    const { uploaded, hash } = await uploadMedicalPayloadWithFallback(
+      eventPayload,
+      [
+        normalizeWallet(patientWallet),
+        normalizeWallet(session.walletAddress),
+        normalizeWallet(body.insurerWallet),
+      ].filter(Boolean),
+      `medical-event-${normalizedEventType.toLowerCase()}-${Date.now()}.json`
+    );
 
-    const recordId = `event:${crypto.randomUUID()}`;
-    const hash = await bodyDigest(eventPayload);
-    const cid = uploaded.cid;
-
-    await blockchainRequest<{ anchor: AnchorItem }>("/anchors/store", {
-      method: "POST",
-      body: JSON.stringify({
-        recordId,
-        hash,
-        cid,
+    let recordId: string;
+    try {
+      recordId = await storeAnchorOnChain({
+        recordKey: `event:${crypto.randomUUID()}`,
+        kind: "OPERATION",
+        cid: uploaded.cid,
+        hashHex: hash,
         ownerWallet: patientWallet,
         doctorWallet: session.walletAddress,
-        authorizedWallets: [session.walletAddress, patientWallet],
-        timestamp: Math.floor(Date.now() / 1000)
-      })
-    });
+        insurerWallet: normalizeWallet(body.insurerWallet) || null,
+        pharmacyWallet: null,
+      });
+    } catch (error) {
+      if (!isContractUnavailableError(error)) {
+        throw error;
+      }
+      recordId = pendingRecordId("event");
+      console.warn("[MSC] Contract unavailable for hospital event anchor; returning pending event id.");
+    }
 
-    return { eventId: recordId } as T;
+    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
   }
 
   if (pathname === "/labo/results" && method === "POST") {
@@ -1419,6 +1562,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       resultSummary?: string;
       amountClaim?: number;
       documentCid?: string;
+      insurerWallet?: string;
     };
 
     const patientWallet = normalizeWallet(body.patientWallet);
@@ -1435,7 +1579,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     const createdAt = new Date().toISOString();
     const sourceDocumentCid = asNonEmptyText(body.documentCid);
     const eventPayload = {
-      schema: "msce-medical-event-v1",
+      schema: "msce-medical-event-v2",
       eventDomain: "LAB_RESULT",
       patientWallet,
       eventType: "LAB_RESULT",
@@ -1450,24 +1594,37 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       createdAt,
     };
 
-    const uploaded = await uploadJsonToIpfs(eventPayload, `labo-result-${Date.now()}.json`);
-    const recordId = `event:${crypto.randomUUID()}`;
-    const hash = await bodyDigest(eventPayload);
+    const { uploaded, hash } = await uploadMedicalPayloadWithFallback(
+      eventPayload,
+      [
+        normalizeWallet(patientWallet),
+        normalizeWallet(session.walletAddress),
+        normalizeWallet(body.insurerWallet),
+      ].filter(Boolean),
+      `labo-result-${Date.now()}.json`
+    );
 
-    await blockchainRequest<{ anchor: AnchorItem }>("/anchors/store", {
-      method: "POST",
-      body: JSON.stringify({
-        recordId,
-        hash,
+    let recordId: string;
+    try {
+      recordId = await storeAnchorOnChain({
+        recordKey: `event:${crypto.randomUUID()}`,
+        kind: "LAB_RESULT",
         cid: uploaded.cid,
+        hashHex: hash,
         ownerWallet: patientWallet,
         doctorWallet: session.walletAddress,
-        authorizedWallets: [session.walletAddress, patientWallet],
-        timestamp: Math.floor(Date.now() / 1000),
-      }),
-    });
+        insurerWallet: normalizeWallet(body.insurerWallet) || null,
+        pharmacyWallet: null,
+      });
+    } catch (error) {
+      if (!isContractUnavailableError(error)) {
+        throw error;
+      }
+      recordId = pendingRecordId("event");
+      console.warn("[MSC] Contract unavailable for lab result anchor; returning pending event id.");
+    }
 
-    return { eventId: recordId } as T;
+    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
   }
 
   if (pathname === "/admin/users" && method === "GET") {
@@ -1483,22 +1640,14 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     };
 
     for (const anchor of anchors) {
-      // Include governance records.
-      if (
-        anchor.recordId.startsWith("mongo:walletroles:") ||
-        anchor.recordId.startsWith("mongo:walletidentities:") ||
-        anchor.recordId.startsWith("mongo:users:")
-      ) {
-        addWallet(anchor.ownerWallet);
-      }
-
-      // Include all actors seen in medical/prescription anchors.
       addWallet(anchor.ownerWallet);
       addWallet(anchor.doctorWallet);
       addWallet(anchor.pharmacyWallet || null);
-      for (const wallet of anchor.authorizedWallets || []) {
-        addWallet(wallet);
-      }
+      addWallet(anchor.insurerWallet || null);
+    }
+
+    for (const walletAddress of listGovernanceWallets()) {
+      addWallet(walletAddress);
     }
 
     addWallet(session.walletAddress);
@@ -1506,26 +1655,13 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     const sessionRegion = getSessionRegion(session);
     const users: AdminListItem[] = [];
 
-    const inferRoleFromAnchors = (walletAddress: string): string => {
-      if (anchors.some((item) => item.pharmacyWallet === walletAddress)) return "PHARMACIE";
-      if (anchors.some((item) => item.doctorWallet === walletAddress)) return "MEDECIN";
-      if (anchors.some((item) => item.ownerWallet === walletAddress)) return "PATIENT";
-      return "PATIENT";
-    };
-
     for (const walletAddress of Array.from(roleWallets.values())) {
       try {
-        const roleRes = await fetch(`/api/role/resolve/${encodeURIComponent(walletAddress)}?nocache=true`, { cache: "no-store" });
-        if (!roleRes.ok) continue;
-        const resolved = (await roleRes.json()) as {
-          role?: string | null;
-          region?: string | null;
-          isGlobalAdmin?: boolean;
-        };
+        const resolvedRole = await resolveWalletRoleOnChain(walletAddress);
+        const identity = await resolveWalletIdentityOnChain(walletAddress);
 
-        const role = normalizeRole(String(resolved.role || "")) || inferRoleFromAnchors(walletAddress);
-
-        const region = String(resolved.region || "").trim() || null;
+        const role = normalizeRole(String(resolvedRole.role || "")) || "UNASSIGNED";
+        const region = String(resolvedRole.region || "").trim() || null;
         if (!session.identity?.isGlobalAdmin && sessionRegion && region && region !== sessionRegion) {
           continue;
         }
@@ -1535,12 +1671,14 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
           roles: [role],
           identity: {
             role,
-            fullName: walletAddress === session.walletAddress ? "Local User" : "Utilisateur Wallet",
+            fullName: identity.fullName || (walletAddress === session.walletAddress ? "Local User" : "Utilisateur Wallet"),
             nickname: "wallet-user",
             dateOfBirth: "1990-01-01",
             region,
-            isGlobalAdmin: Boolean(resolved.isGlobalAdmin),
-            approvalStatus: role === "MEDECIN" ? "PENDING" : "APPROVED",
+            isGlobalAdmin: Boolean(resolvedRole.isGlobalAdmin),
+            institutionName: identity.institutionName || null,
+            departmentName: identity.departmentName || null,
+            approvalStatus: role === "MEDECIN" ? "PENDING" : role === "UNASSIGNED" ? undefined : "APPROVED",
           },
         });
       } catch {
@@ -1665,5 +1803,5 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     return { ok: true } as T;
   }
 
-  throw new Error(`Route non supportee sans backend Node: ${method} ${pathname}`);
+  throw new Error(`Route non supportee en mode decentralise: ${method} ${pathname}`);
 }

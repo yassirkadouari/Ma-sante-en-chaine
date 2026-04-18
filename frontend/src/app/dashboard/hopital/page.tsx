@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Hospital, Search, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Activity, Upload, UserSearch, ShieldCheck } from "lucide-react";
 import { apiRequest } from "../../../lib/api";
 import { uploadJsonToIpfs } from "@/lib/ipfsClient";
-import { encryptMedicalPayload, sha256HexFromObject } from "@/lib/medicalCrypto";
+import { encryptMedicalPayloadOrPlain } from "@/lib/medicalCrypto";
 
 type PatientArchive = {
   walletAddress: string;
@@ -31,10 +31,8 @@ export default function HopitalDashboard() {
   const [department, setDepartment] = useState("");
   const [details, setDetails] = useState("");
   const [amountClaim, setAmountClaim] = useState("");
-  const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
+  const [status, setStatus] = useState<{ type: "success" | "error" | "info", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
-  const [enableIpfs, setEnableIpfs] = useState(true);
 
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
@@ -52,11 +50,8 @@ export default function HopitalDashboard() {
       if (!patientWallet) throw new Error("Le wallet du patient est obligatoire.");
 
       let documentCid: string | undefined;
-      
-      if (enableIpfs && file) {
-        if (encryptionPassphrase.trim().length < 8) {
-          throw new Error("La passphrase de chiffrement IPFS est requise et doit contenir au moins 8 caracteres.");
-        }
+
+      if (file) {
         
         const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -77,12 +72,22 @@ export default function HopitalDashboard() {
           fileName: file.name
         };
 
-        const encrypted = await encryptMedicalPayload(documentPayload, encryptionPassphrase);
-        const uploaded = await uploadJsonToIpfs(encrypted, `hopital-event-${Date.now()}.json`);
+        const packaged = await encryptMedicalPayloadOrPlain(documentPayload, {
+          recipientWallets: [patientWallet],
+        });
+
+        if (!packaged.encrypted && packaged.missingRecipientWallets.length > 0) {
+          console.warn(
+            `[MSC] Missing recipient encryption key(s): ${packaged.missingRecipientWallets.join(", ")}. ` +
+            "Uploading plain JSON payload for hospital document."
+          );
+        }
+
+        const uploaded = await uploadJsonToIpfs(packaged.payload, `hopital-event-${Date.now()}.json`);
         documentCid = uploaded.cid;
       }
 
-      const response = await apiRequest<{ eventId: string }>({
+      const response = await apiRequest<{ eventId: string; pending?: boolean }>({
         method: "POST",
         path: "/hopital/events",
         signed: true,
@@ -92,14 +97,26 @@ export default function HopitalDashboard() {
         department,
         details,
         amountClaim: amountClaim ? Number(amountClaim) : 0,
-        documentCid: documentCid || (file ? `pending-file:${file.name}` : undefined)
+        documentCid: documentCid
       }
       });
 
-      setStatus({ 
-        type: "success", 
-        msg: `Acte ${eventType} enregistre et scelle. ID: ${response.eventId.slice(0, 8)}` 
-      });
+      const pending = Boolean(response.pending || response.eventId.startsWith("pending:"));
+      const eventLabel = pending ? response.eventId : response.eventId.slice(0, 8);
+
+      setStatus(
+        pending
+          ? {
+              type: "info",
+              msg:
+                `Acte ${eventType} enregistre (IPFS OK), ancrage blockchain en attente. ` +
+                `ID temporaire: ${eventLabel}`,
+            }
+          : {
+              type: "success",
+              msg: `Acte ${eventType} enregistre et scelle. ID: ${eventLabel}`,
+            }
+      );
       
       setPatientWallet("");
       setDetails("");
@@ -207,50 +224,14 @@ export default function HopitalDashboard() {
               </div>
             </div>
 
-              {/* IPFS Network Config */}
-              <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-500" />
-                    <span className="text-[10px] text-blue-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={enableIpfs} onChange={e => setEnableIpfs(e.target.checked)} />
-                    <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-neutral-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
+              <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-500" />
+                  <span className="text-[10px] text-blue-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
                 </div>
-                {enableIpfs && (
-                  <input
-                    type="password"
-                    placeholder="PASSPHRASE DE CHIFFREMENT HORS-LIGNE (8+ CARACTERES)"
-                    value={encryptionPassphrase}
-                    onChange={(e) => setEncryptionPassphrase(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 p-3 rounded-lg text-[10px] text-white outline-none focus:border-blue-500/50 transition-all font-black uppercase tracking-widest placeholder:text-neutral-700"
-                  />
-                )}
-              </div>
-
-              {/* IPFS Network Config */}
-              <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-500" />
-                    <span className="text-[10px] text-blue-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={enableIpfs} onChange={e => setEnableIpfs(e.target.checked)} />
-                    <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-neutral-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-                {enableIpfs && (
-                  <input
-                    type="password"
-                    placeholder="PASSPHRASE DE CHIFFREMENT HORS-LIGNE (8+ CARACTERES)"
-                    value={encryptionPassphrase}
-                    onChange={(e) => setEncryptionPassphrase(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 p-3 rounded-lg text-[10px] text-white outline-none focus:border-blue-500/50 transition-all font-black uppercase tracking-widest placeholder:text-neutral-700"
-                  />
-                )}
+                <p className="text-[10px] text-neutral-400 leading-relaxed">
+                  Le PDF est chiffré si la clé destinataire existe, sinon ancré en JSON IPFS pour éviter le blocage.
+                </p>
               </div>
 
             <div>
@@ -346,7 +327,11 @@ export default function HopitalDashboard() {
 
       {status && (
         <div className={`fixed bottom-6 right-6 p-4 rounded-2xl border shadow-2xl flex items-center gap-3 text-xs animate-in slide-in-from-bottom-4 duration-300 font-black ${
-          status.type === "success" ? "bg-blue-950 border-blue-500 text-blue-400" : "bg-red-950 border-red-500 text-red-400"
+          status.type === "success"
+            ? "bg-blue-950 border-blue-500 text-blue-400"
+            : status.type === "error"
+              ? "bg-red-950 border-red-500 text-red-400"
+              : "bg-amber-950 border-amber-500 text-amber-400"
         }`}>
           {status.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
           {status.msg}

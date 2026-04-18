@@ -3,9 +3,22 @@ type UploadResult = {
   size: number;
 };
 
+type ProxyUploadPayload = {
+  cid?: string;
+  size?: number;
+  error?: string;
+};
+
+type ProxyReadPayload<T> = {
+  payload?: T;
+  error?: string;
+};
+
 const DEFAULT_IPFS_API = "http://127.0.0.1:5001/api/v0";
 const DEFAULT_IPFS_GATEWAY = "https://ipfs.io/ipfs";
 const DEFAULT_PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs";
+const UPLOAD_RATE_LIMIT_MAX_RETRIES = 0;
+const UPLOAD_RATE_LIMIT_BASE_DELAY_MS = 1200;
 
 function getIpfsApiBase(): string {
   return (process.env.NEXT_PUBLIC_IPFS_API_URL || DEFAULT_IPFS_API).replace(/\/$/, "");
@@ -70,6 +83,92 @@ function extractPinataCid(raw: string): UploadResult {
   };
 }
 
+function asErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return String(error || "unknown error");
+}
+
+function isRateLimitError(error: unknown): boolean {
+  const message = asErrorMessage(error).toLowerCase();
+  return (
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("429")
+  );
+}
+
+async function wait(ms: number) {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function withUploadRetry<T>(operation: string, action: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= UPLOAD_RATE_LIMIT_MAX_RETRIES; attempt += 1) {
+    try {
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (!isRateLimitError(error) || attempt === UPLOAD_RATE_LIMIT_MAX_RETRIES) {
+        throw error;
+      }
+
+      const delay = UPLOAD_RATE_LIMIT_BASE_DELAY_MS * (attempt + 1);
+      console.warn(
+        `[MSC] ${operation} rate-limited; retrying in ${delay}ms (${attempt + 1}/${UPLOAD_RATE_LIMIT_MAX_RETRIES})`
+      );
+      await wait(delay);
+    }
+  }
+
+  throw lastError;
+}
+
+function networkError(context: string, url: string, error: unknown): Error {
+  return new Error(
+    `${context} network failure while calling ${url}. ` +
+    `Verify endpoint, CORS policy, internet access, and token configuration. ` +
+    `${asErrorMessage(error)}`
+  );
+}
+
+async function uploadViaBrowserProxy(payload: unknown, fileName: string): Promise<UploadResult> {
+  const response = await fetch("/api/ipfs/upload-json", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ payload, fileName }),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as ProxyUploadPayload;
+  if (!response.ok || !data.cid) {
+    throw new Error(data.error || `IPFS browser proxy failed (${response.status}).`);
+  }
+
+  return {
+    cid: data.cid,
+    size: Number(data.size || 0),
+  };
+}
+
+async function readJsonViaBrowserProxy<T>(cid: string): Promise<T> {
+  const response = await fetch("/api/ipfs/read-json", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ cid }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as ProxyReadPayload<T>;
+  if (!response.ok || payload.payload === undefined) {
+    throw new Error(payload.error || `IPFS browser proxy read failed (${response.status}).`);
+  }
+
+  return payload.payload;
+}
+
 export function getGatewayUrl(cid: string): string {
   if (!cid || !cid.trim()) {
     throw new Error("CID is required.");
@@ -78,80 +177,108 @@ export function getGatewayUrl(cid: string): string {
 }
 
 export async function uploadJsonToIpfs(payload: unknown, fileName = "medical-record.json"): Promise<UploadResult> {
-  // Browser calls should use same-origin proxy route to avoid CORS failures.
-  if (typeof window !== "undefined") {
-    const proxyResponse = await fetch("/api/ipfs/upload-json", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ payload, fileName }),
-    });
+  return withUploadRetry("ipfs-upload", async () => {
+    if (isPinataApi()) {
+      const url = `${getIpfsApiBase()}/pinJSONToIPFS`;
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...buildHeaders(),
+          },
+          body: JSON.stringify({
+            pinataContent: payload,
+            pinataMetadata: {
+              name: fileName,
+            },
+          }),
+        });
+      } catch (error) {
+        if (typeof window !== "undefined") {
+          try {
+            return await uploadViaBrowserProxy(payload, fileName);
+          } catch (proxyError) {
+            throw new Error(
+              `${networkError("Pinata upload", url, error).message} ` +
+              `Proxy fallback failed: ${asErrorMessage(proxyError)}`
+            );
+          }
+        }
+        throw networkError("Pinata upload", url, error);
+      }
 
-    const proxyPayload = (await proxyResponse.json()) as { cid?: string; size?: number; error?: string };
-    if (!proxyResponse.ok || !proxyPayload.cid) {
-      throw new Error(proxyPayload.error || `IPFS proxy upload failed (${proxyResponse.status}).`);
+      const raw = await response.text();
+      if (!response.ok) {
+        throw new Error(`Pinata upload failed (${response.status}): ${raw}`);
+      }
+
+      return extractPinataCid(raw);
     }
 
-    return { cid: proxyPayload.cid, size: Number(proxyPayload.size || 0) };
-  }
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
 
-  if (isPinataApi()) {
-    const response = await fetch(`${getIpfsApiBase()}/pinJSONToIPFS`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...buildHeaders(),
-      },
-      body: JSON.stringify({
-        pinataContent: payload,
-        pinataMetadata: {
-          name: fileName,
-        },
-      }),
-    });
+    const url = `${getIpfsApiBase()}/add?pin=true&cid-version=1`;
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: formData,
+      });
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        try {
+          return await uploadViaBrowserProxy(payload, fileName);
+        } catch (proxyError) {
+          throw new Error(
+            `${networkError("IPFS upload", url, error).message} ` +
+            `Proxy fallback failed: ${asErrorMessage(proxyError)}`
+          );
+        }
+      }
+      throw networkError("IPFS upload", url, error);
+    }
 
     const raw = await response.text();
     if (!response.ok) {
-      throw new Error(`Pinata upload failed (${response.status}): ${raw}`);
+      throw new Error(`IPFS upload failed (${response.status}): ${raw}`);
     }
 
-    return extractPinataCid(raw);
-  }
-
-  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-  const formData = new FormData();
-  formData.append("file", blob, fileName);
-
-  const response = await fetch(`${getIpfsApiBase()}/add?pin=true&cid-version=1`, {
-    method: "POST",
-    headers: buildHeaders(),
-    body: formData,
+    return extractCid(raw);
   });
-
-  const raw = await response.text();
-  if (!response.ok) {
-    throw new Error(`IPFS upload failed (${response.status}): ${raw}`);
-  }
-
-  return extractCid(raw);
 }
 
 export async function downloadJsonFromIpfs<T>(cid: string): Promise<T> {
-  if (typeof window !== "undefined") {
-    const response = await fetch("/api/ipfs/read-json", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ cid }),
-    });
-
-    const payload = (await response.json()) as { payload?: T; error?: string };
-    if (!response.ok || payload.payload === undefined) {
-      throw new Error(payload.error || `IPFS proxy read failed (${response.status}).`);
+  if (cid.startsWith("pending:")) {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(cid);
+      if (cached) {
+        return JSON.parse(cached) as T;
+      }
     }
-
-    return payload.payload;
+    throw new Error(`Payload IPFS en attente (rate-limited) et introuvable localement pour le CID: ${cid}`);
   }
 
-  const response = await fetch(getGatewayUrl(cid));
+  if (typeof window !== "undefined") {
+    try {
+      return await readJsonViaBrowserProxy<T>(cid);
+    } catch (error) {
+      console.warn(`[MSC] Browser IPFS proxy read failed for ${cid}; falling back to direct gateway.`, error);
+    }
+  }
+
+  const url = getGatewayUrl(cid);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    throw networkError("IPFS JSON read", url, error);
+  }
+
   if (!response.ok) {
     throw new Error(`IPFS read failed (${response.status}).`);
   }
@@ -159,7 +286,24 @@ export async function downloadJsonFromIpfs<T>(cid: string): Promise<T> {
 }
 
 export async function downloadTextFromIpfs(cid: string): Promise<string> {
-  const response = await fetch(getGatewayUrl(cid));
+  if (cid.startsWith("pending:")) {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(cid);
+      if (cached) {
+        return cached;
+      }
+    }
+    throw new Error(`Texte IPFS en attente (rate-limited) et introuvable localement pour le CID: ${cid}`);
+  }
+
+  const url = getGatewayUrl(cid);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    throw networkError("IPFS text read", url, error);
+  }
+
   if (!response.ok) {
     throw new Error(`IPFS read failed (${response.status}).`);
   }

@@ -1,41 +1,65 @@
 # Ma Sante en Chaine
 
-Plateforme sante decentralisee orientee tracabilite, ancrage hash/CID et stockage medical chiffre sur IPFS.
+Plateforme santé décentralisée orientée traçabilité, ancrage cryptographique (Hash/CID) et stockage médical chiffré sur IPFS.
 
-## Etat du projet
+## État du projet
 
-- Le backend Node.js n est plus present dans ce repository.
-- L architecture active repose sur:
-1. frontend Next.js (wallet-first, chiffrement local, UX par role)
-2. couche Rust blockchain API (anchors, events, droits, statuts)
-3. IPFS/Pinata (stockage off-chain des payloads chiffres)
+- Le backend Node.js classique ainsi que l'API Rust legacy ont été remplacés.
+- L'architecture 100% Web3 active repose sur :
+  1. **Frontend Next.js** (wallet-first, chiffrement local, UX par rôle, logique métier décentralisée).
+  2. **Smart Contract ink!** sur un nœud **Substrate Contracts** (gestion des ancres, événements, droits d'accès, cycles de vie des claims).
+  3. **IPFS/Pinata** (stockage off-chain des dossiers médicaux chiffrés).
 
 ## Architecture active
 
-1. Un acteur se connecte avec wallet dans le frontend.
-2. Le frontend chiffre le payload medical puis calcule un hash.
-3. Le payload chiffre est uploade sur IPFS et retourne un CID.
-4. Le frontend ancre hash + CID dans la Rust API via /anchors/store.
-5. Les operations metier (grant/revoke/deliver/cancel) mettent a jour l anchor et les events.
-6. L etat Rust est persiste sur disque dans un fichier JSON.
+1. Un acteur se connecte avec son wallet (Polkadot.js) dans le frontend.
+2. Le frontend chiffre le payload médical localement (AES-GCM), puis calcule son Hash (SHA-256).
+3. Le payload chiffré est uploadé sur IPFS et retourne un CID.
+4. Le frontend ancre le couple Hash + CID de façon immuable dans le Smart Contract.
+5. Les opérations métier (grant/revoke/deliver/claim) appellent les fonctions du contrat ink!.
+6. L'état du contrat est persisté dans le nœud local Substrate.
 
-## Prerequis
+## Prérequis
 
 - Node.js 20+
 - npm 10+
-- Rust stable + cargo
-- Extension wallet Polkadot.js
+- Rust stable + toolchain WebAssembly
+- [cargo-contract](https://github.com/paritytech/cargo-contract) (outil de compilation ink!)
+- [substrate-contracts-node](https://github.com/paritytech/substrate-contracts-node) (le nœud blockchain de développement)
+- Extension wallet navigateur (Polkadot.js, Talisman, ou SubWallet)
 
-## Demarrage local
+---
 
-### 1) Lancer la couche Rust
+## Démarrage local
+
+Pour lancer l'application complètement, suivez ces 3 étapes :
+
+### 1) Lancer le nœud Blockchain (Substrate)
+
+Ouvrez un terminal et lancez un nœud blockchain persistant :
 
 ```bash
-cd smart-contracts
-BLOCKCHAIN_STATE_FILE=data/blockchain_state.json PORT=4600 cargo run --bin blockchain_api
+mkdir -p ./blockchain-data
+substrate-contracts-node --dev -d ./blockchain-data
 ```
 
-### 2) Lancer le frontend
+*(Laissez ce terminal ouvert en arrière-plan. L'état sera sauvegardé dans le dossier `blockchain-data`)*
+
+### 2) Déployer le Smart Contract
+
+Ouvrez un nouveau terminal à la racine du projet et exécutez le script d'automatisation :
+
+```bash
+./deploy-contract.sh
+```
+
+Ce script va automatiquement :
+- Compiler le contrat ink!
+- Le déployer sur votre nœud local.
+- Mettre à jour l'adresse dans `frontend/.env.local`.
+- Copier la metadata JSON au bon endroit pour le frontend.
+
+### 3) Lancer le Frontend
 
 ```bash
 cd frontend
@@ -43,51 +67,37 @@ npm install
 npm run dev
 ```
 
-## Variables frontend minimales
+L'application est maintenant disponible sur [http://localhost:3000](http://localhost:3000).
 
-Configurer `frontend/.env.local` avec au moins:
+---
+
+## Variables d'environnement
+
+Le fichier `frontend/.env.local` est généré/modifié par le script de déploiement. Il doit contenir :
 
 ```env
-NEXT_PUBLIC_BLOCKCHAIN_API_URL=http://localhost:4600
+# Configuration Blockchain
+NEXT_PUBLIC_CHAIN_WS_URL=ws://127.0.0.1:9944
+NEXT_PUBLIC_CONTRACT_ADDRESS=votre_adresse_de_contrat_generee
+NEXT_PUBLIC_CONTRACT_METADATA_URL=/contracts/medical_anchors_contract.json
+
+# Configuration IPFS (Pinata)
 NEXT_PUBLIC_IPFS_API_URL=https://api.pinata.cloud/pinning
 NEXT_PUBLIC_IPFS_GATEWAY_URL=https://gateway.pinata.cloud/ipfs
-NEXT_PUBLIC_IPFS_API_TOKEN=replace_with_pinata_jwt
-NEXT_PUBLIC_ADMIN_WALLETS=wallet1,wallet2
+NEXT_PUBLIC_IPFS_API_TOKEN=votre_token_jwt_pinata
+
+# Configuration Application
+NEXT_PUBLIC_ADMIN_WALLETS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
 ```
 
-Optionnel:
-
-```env
-NEXT_PUBLIC_NO_BACKEND=true
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
-## Verification rapide
-
-```bash
-curl http://localhost:4600/health
-curl http://localhost:4600/debug/state
-curl http://localhost:4600/anchors
-curl http://localhost:4600/events
-```
+---
 
 ## Documentation du projet
 
-- [documentation.md](documentation.md): reference technique complete
-- [ipfs.md](ipfs.md): flux IPFS, chiffrement, verification integrite
-- [migrationipfs.md](migrationipfs.md): strategie migration et scripts
-- [frontend/README.md](frontend/README.md): guide frontend et variables
-
-## Checklist avant push branche ipfs
-
-1. Verifier que la Rust API demarre sans erreur.
-2. Verifier login wallet et resolution role.
-3. Verifier create/read/deliver ordonnance.
-4. Verifier lecture PDF acte chiffre avec passphrase.
-5. Verifier claims patient/assurance.
-6. Verifier lint frontend.
-7. Relire docs et endpoints exposes.
+- [documentation.md](documentation.md) : référence technique complète et détaillée.
+- [ipfs.md](ipfs.md) : flux IPFS, chiffrement local, vérification d'intégrité.
+- [frontend/README.md](frontend/README.md) : guide spécifique au frontend.
 
 ## Licence
 
-Projet academique. Adapter la licence selon votre politique de publication.
+Projet académique. Adapter la licence selon votre politique de publication.

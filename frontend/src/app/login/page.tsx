@@ -4,13 +4,20 @@ import { useState } from "react";
 import { LockKeyhole, Terminal } from "lucide-react";
 import { connectWallet, signMessage } from "@/lib/wallet";
 import { saveSession } from "@/lib/session";
+import { resolveWalletIdentityOnChain, resolveWalletRoleOnChain } from "@/lib/onchainIdentity";
+import {
+  ensureWalletEncryptionKeyRegistered,
+  isRateLimitLikeError,
+  primeWalletKeyPairFromSignature,
+} from "@/lib/medicalCrypto";
+import { readWalletProfile, saveWalletProfile } from "@/lib/walletProfileStore";
 
-const WALLET_ROLE_KEY = "msc_wallet_roles_v1";
-const PROFILE_KEY = "msc_patient_profiles_v1";
 const FORCED_ADMIN_WALLETS = String(process.env.NEXT_PUBLIC_ADMIN_WALLETS || "")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean);
+const AUTO_KEY_REGISTER_LAST_ATTEMPT_KEY = "msc_auto_key_register_last_attempt_v1";
+const AUTO_KEY_REGISTER_COOLDOWN_MS = 10 * 60 * 1000;
 
 function normalizeRole(value: string) {
   const v = value.trim().toUpperCase();
@@ -39,34 +46,6 @@ function splitFullName(value: string | null | undefined) {
   };
 }
 
-function readStoredAge(walletAddress: string): number | null {
-  if (typeof localStorage === "undefined") return null;
-  try {
-    const profiles = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") as Record<string, { age?: unknown }>;
-    const value = Number(profiles[String(walletAddress || "").trim()]?.age ?? 0);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredAge(walletAddress: string, age: number) {
-  if (typeof localStorage === "undefined") return;
-  const key = String(walletAddress || "").trim();
-  if (!key) return;
-
-  try {
-    const profiles = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}") as Record<string, { age?: number }>;
-    profiles[key] = {
-      ...(profiles[key] || {}),
-      age,
-    };
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profiles));
-  } catch {
-    // Keep login resilient even if local profile storage is corrupted.
-  }
-}
-
 function birthDateFromAge(age: number) {
   const currentYear = new Date().getFullYear();
   const safeAge = Math.min(120, Math.max(1, Math.floor(age)));
@@ -74,14 +53,35 @@ function birthDateFromAge(age: number) {
   return `${year}-01-01`;
 }
 
+function shouldAttemptAutoKeyRegistration() {
+  if (typeof window === "undefined") return true;
+
+  try {
+    const raw = localStorage.getItem(AUTO_KEY_REGISTER_LAST_ATTEMPT_KEY);
+    const lastAttempt = Number(raw || 0);
+    if (!Number.isFinite(lastAttempt) || lastAttempt <= 0) {
+      return true;
+    }
+
+    return Date.now() - lastAttempt >= AUTO_KEY_REGISTER_COOLDOWN_MS;
+  } catch {
+    return true;
+  }
+}
+
+function markAutoKeyRegistrationAttempt() {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(AUTO_KEY_REGISTER_LAST_ATTEMPT_KEY, String(Date.now()));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 async function resolveIdentityFromAnchors(walletAddress: string): Promise<{ fullName: string | null }> {
   try {
-    const response = await fetch(`/api/identity/resolve/${encodeURIComponent(walletAddress)}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) return { fullName: null };
-    const payload = (await response.json()) as { fullName?: string | null };
+    const payload = await resolveWalletIdentityOnChain(walletAddress);
     return { fullName: String(payload.fullName || "").trim() || null };
   } catch {
     return { fullName: null };
@@ -95,18 +95,7 @@ async function detectRoleFromAnchors(walletAddress: string): Promise<{
   isGlobalAdmin?: boolean;
   source: string;
 }> {
-  const response = await fetch(`/api/role/resolve/${encodeURIComponent(walletAddress)}`);
-  if (!response.ok) {
-    throw new Error(`Role API indisponible (${response.status})`);
-  }
-
-  const payload = (await response.json()) as {
-    role?: string | null;
-    anchorsCount?: number;
-    region?: string | null;
-    isGlobalAdmin?: boolean;
-    source?: string;
-  };
+  const payload = await resolveWalletRoleOnChain(walletAddress);
   const normalized = normalizeRole(String(payload.role || ""));
 
   return {
@@ -160,14 +149,6 @@ function LoginForm() {
   }) => {
     const fullName = [payload.firstName, payload.lastName].filter(Boolean).join(" ").trim();
 
-    if (typeof localStorage !== "undefined") {
-      const registry = JSON.parse(localStorage.getItem(WALLET_ROLE_KEY) || "{}") as Record<string, string>;
-      registry[payload.walletAddress] = payload.role;
-      localStorage.setItem(WALLET_ROLE_KEY, JSON.stringify(registry));
-    }
-
-    saveStoredAge(payload.walletAddress, payload.age);
-
     const session = {
       token: `local-${Date.now()}`,
       walletAddress: payload.walletAddress,
@@ -209,6 +190,13 @@ function LoginForm() {
       }
 
       setProfileError(null);
+      await saveWalletProfile({
+        walletAddress: pendingSession.walletAddress,
+        firstName,
+        lastName,
+        age: Math.floor(ageValue),
+      });
+
       await finalizeLogin({
         walletAddress: pendingSession.walletAddress,
         role: pendingSession.role,
@@ -244,46 +232,47 @@ function LoginForm() {
         effectiveRole = "ADMIN";
       }
 
-      // If state is empty or migration data is unavailable, allow login with safe default role.
-      if (!effectiveRole && detected.anchorsCount === 0) {
-        effectiveRole = "PATIENT";
-      }
-
-      if (typeof localStorage !== "undefined") {
-        const registry = JSON.parse(localStorage.getItem(WALLET_ROLE_KEY) || "{}") as Record<string, string>;
-        const storedRole = registry[address];
-        const normalizedStored = storedRole ? normalizeRole(storedRole) : "";
-
-        const resolverHasAuthority = detected.source === "role-anchor-unresolved" || detected.source.includes("mongo:walletroles:");
-
-        // Use cached role only as a fallback when resolver has no authoritative role source.
-        if (!effectiveRole && !resolverHasAuthority) {
-          if (normalizedStored) {
-            effectiveRole = normalizedStored;
-          }
-        }
-      }
-
       if (!effectiveRole) {
-        throw new Error("Role wallet introuvable dans les donnees migrees. Verifie la migration users -> IPFS.");
+        const reason = detected.source || "role-not-found";
+        throw new Error(
+          `Role wallet introuvable dans le registre gouvernance IPFS pour ${address} (source: ${reason}). ` +
+          `Ajoutez cette wallet dans NEXT_PUBLIC_ADMIN_WALLETS, redemarrez npm run dev, ` +
+          `connectez-vous en ADMIN puis assignez un role a cette wallet.`
+        );
       }
 
       setRole(effectiveRole);
 
       const message = [
-        "MaSanteEnChaine Local Login",
+        "MaSanteEnChaine Decentralized Login",
         `wallet:${address}`,
         `timestamp:${Date.now()}`
       ].join("\n");
 
-      await signMessage(address, message);
+      const loginSignature = await signMessage(address, message);
+      await primeWalletKeyPairFromSignature(address, loginSignature);
+
+      if (shouldAttemptAutoKeyRegistration()) {
+        markAutoKeyRegistrationAttempt();
+        try {
+          await ensureWalletEncryptionKeyRegistered();
+        } catch (encryptionKeyError) {
+          if (!isRateLimitLikeError(encryptionKeyError)) {
+            console.warn("[MSC] Failed to auto-register wallet encryption key at login.", encryptionKeyError);
+          }
+        }
+      }
 
       const resolvedIdentity = await resolveIdentityFromAnchors(address);
+      const persistedProfile = readWalletProfile(address);
       const parsedName = splitFullName(resolvedIdentity.fullName);
-      const storedAge = readStoredAge(address);
+      const firstName = String(persistedProfile?.firstName || parsedName.firstName || "").trim();
+      const lastName = String(persistedProfile?.lastName || parsedName.lastName || "").trim();
+      const persistedAge = Math.floor(Number(persistedProfile?.age || 0));
+      const storedAge = Number.isFinite(persistedAge) && persistedAge > 0 ? persistedAge : null;
 
-      const missingFirstName = !parsedName.firstName.trim();
-      const missingLastName = !parsedName.lastName.trim();
+      const missingFirstName = !firstName;
+      const missingLastName = !lastName;
       const missingAge = !storedAge;
 
       if (missingFirstName || missingLastName || missingAge) {
@@ -293,8 +282,8 @@ function LoginForm() {
           region: detected.region ?? null,
           isGlobalAdmin: detected.isGlobalAdmin,
         });
-        setProfileFirstName(parsedName.firstName);
-        setProfileLastName(parsedName.lastName);
+        setProfileFirstName(firstName);
+        setProfileLastName(lastName);
         setProfileAge(storedAge ? String(storedAge) : "");
         setWalletStatus("connected");
         return;
@@ -305,8 +294,8 @@ function LoginForm() {
         role: effectiveRole,
         region: detected.region ?? null,
         isGlobalAdmin: detected.isGlobalAdmin,
-        firstName: parsedName.firstName,
-        lastName: parsedName.lastName,
+        firstName,
+        lastName,
         age: storedAge,
       });
     } catch (error: any) {
@@ -394,7 +383,7 @@ function LoginForm() {
 
         <div className="text-xs text-neutral-500 font-mono">
           {walletStatus === "connecting" && "Connexion en cours..."}
-          {walletStatus === "detecting-role" && "Detection du role wallet via IPFS/Blockchain..."}
+          {walletStatus === "detecting-role" && "Detection du role wallet via registre IPFS..."}
           {walletStatus === "error" && "Erreur de connexion au wallet ou signature invalide."}
           {walletStatus === "connected" && `Wallet connecte: ${walletAddress}`}
           {walletStatus === "idle" && ""}

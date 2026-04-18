@@ -1,0 +1,10 @@
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/ink/release/deps/xcm_procedural-5c844fe61ba3bb7d.d: /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/lib.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/builder_pattern.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v2.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v3.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v4.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/weight_info.rs
+
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/ink/release/deps/libxcm_procedural-5c844fe61ba3bb7d.so: /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/lib.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/builder_pattern.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v2.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v3.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v4.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/weight_info.rs
+
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/lib.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/builder_pattern.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v2.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v3.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/v4.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/xcm-procedural-8.0.0/src/weight_info.rs:

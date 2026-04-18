@@ -1,0 +1,10 @@
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/debug/deps/derive_more-4675427755884575.d: /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/lib.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/syn_compat.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/utils.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/display.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/from.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/parsing.rs
+
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/debug/deps/libderive_more-4675427755884575.so: /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/lib.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/syn_compat.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/utils.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/display.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/from.rs /home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/parsing.rs
+
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/lib.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/syn_compat.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/utils.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/display.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/from.rs:
+/home/ramsis/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/derive_more-0.99.20/src/parsing.rs:

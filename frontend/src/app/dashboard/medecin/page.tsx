@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FilePlus2, ShieldCheck, FileText, UserSearch, ClipboardList, Activity, CheckCircle2, AlertCircle } from "lucide-react";
-import { uploadJsonToIpfs } from "@/lib/ipfsClient";
-import { encryptMedicalPayload, sha256HexFromObject } from "@/lib/medicalCrypto";
 import { apiRequest } from "../../../lib/api";
-import { connectWallet } from "@/lib/wallet";
 
 type PrescriptionSummary = {
   recordId: string;
@@ -37,7 +34,6 @@ type PatientArchive = {
 };
 
 export default function MedecinDashboard() {
-  const blockchainApiBase = (process.env.NEXT_PUBLIC_BLOCKCHAIN_API_URL || "http://localhost:4600").replace(/\/$/, "");
   const [patientWallet, setPatientWallet] = useState("");
   const [pharmacyWallet, setPharmacyWallet] = useState("");
   const [items, setItems] = useState<PrescriptionSummary[]>([]);
@@ -59,11 +55,11 @@ export default function MedecinDashboard() {
     medications: "Ex: Paracétamol 1g (3x/j)",
     instructions: "Repos complet 3 jours."
   });
-  const [enableIpfs, setEnableIpfs] = useState(true);
-  const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
+        setLoadError(null);
         const payload = await apiRequest<{ items?: Array<PrescriptionSummary> }>({ path: "/prescriptions" });
         const mapped: PrescriptionSummary[] = (payload.items || []).map((item) => ({
           recordId: item.recordId,
@@ -76,8 +72,14 @@ export default function MedecinDashboard() {
         }));
 
       setItems(mapped);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch failed", err);
+      const msg = String(err?.message || "");
+      if (msg.toLowerCase().includes("contractnotfound") || msg.toLowerCase().includes("contract unavailable")) {
+        setLoadError("Le contrat blockchain est indisponible. Vérifiez que le nœud Substrate est actif et que le contrat est déployé.");
+      } else {
+        setLoadError(msg || "Erreur de chargement des données.");
+      }
     }
     }, []);
 
@@ -96,59 +98,25 @@ export default function MedecinDashboard() {
       if (!ownerWallet) throw new Error("L'adresse wallet du patient est obligatoire.");
       if (!prescData.ordonnanceText.trim()) throw new Error("Le contenu texte de l'ordonnance est obligatoire.");
 
-      let ipfsMetadata: { cid: string; payloadHash: string; encryptionVersion?: string } | undefined;
-      if (enableIpfs) {
-        if (encryptionPassphrase.trim().length < 8) {
-          throw new Error("La passphrase de chiffrement IPFS doit contenir au moins 8 caractères.");
-        }
-
-        const encryptedPayload = await encryptMedicalPayload(prescData, encryptionPassphrase);
-        const payloadHash = await sha256HexFromObject(encryptedPayload);
-        const uploaded = await uploadJsonToIpfs(encryptedPayload, `ordonnance-${Date.now()}.json`);
-
-        ipfsMetadata = {
-          cid: uploaded.cid,
-          payloadHash,
-          encryptionVersion: encryptedPayload.version
-        };
-      }
-
-      const { walletAddress } = await connectWallet();
-      const recordId = `presc:${crypto.randomUUID()}`;
-      const anchorHash = ipfsMetadata?.payloadHash || (await sha256HexFromObject(prescData));
-
-      const response = await fetch(`${blockchainApiBase}/anchors/store`, {
+      const response = await apiRequest<{ recordId: string; status: string }>({
         method: "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          recordId,
-          hash: anchorHash,
-          cid: ipfsMetadata?.cid || `pending:${recordId}`,
-          ownerWallet,
-          doctorWallet: walletAddress,
+        path: "/prescriptions",
+        signed: true,
+        body: {
+          patientWallet: ownerWallet,
           pharmacyWallet: targetPharmacyWallet || undefined,
-          authorizedWallets: [walletAddress, ownerWallet, targetPharmacyWallet || ""].filter(Boolean),
-          timestamp: Math.floor(Date.now() / 1000)
-        })
+          ordonnanceText: prescData.ordonnanceText,
+          medications: prescData.medications,
+          instructions: prescData.instructions,
+        },
       });
 
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(body || `Anchor store failed (${response.status})`);
-      }
-
-      const resBody = (await response.json()) as { anchor?: { hash?: string; cid?: string } };
-
-      const responseHash = resBody.anchor?.hash || anchorHash;
-      const responseCid = resBody.anchor?.cid || ipfsMetadata?.cid || null;
-      const ipfsLabel = responseCid ? ` CID: ${responseCid.slice(0, 24)}...` : "";
-      const pendingLabel = responseCid?.startsWith("pending:") ? " [PENDING_IPFS]" : "";
-      setStatus({ type: "success", msg: `Ordonnance emise pour ${ownerWallet.slice(0, 12)}... Hash: ${responseHash.slice(0, 16)}...${ipfsLabel}${pendingLabel}` });
+      setStatus({
+        type: "success",
+        msg: `Ordonnance emise pour ${ownerWallet.slice(0, 12)}... Record: ${response.recordId.slice(0, 12)}...`,
+      });
       setPatientWallet("");
       setPharmacyWallet("");
-      setEncryptionPassphrase("");
       setPrescData({
         ordonnanceText: "",
         medications: "Ex: Paracétamol 1g (3x/j)",
@@ -240,6 +208,17 @@ export default function MedecinDashboard() {
         </div>
       </div>
 
+      {loadError && (
+        <div className="p-6 bg-red-950/40 border border-red-500/30 rounded-[2rem] flex items-center gap-4">
+          <div className="p-3 bg-red-500/10 rounded-xl">
+            <AlertCircle className="text-red-500 shrink-0" size={24} />
+          </div>
+          <div>
+            <h3 className="text-red-400 font-black uppercase text-sm mb-1 tracking-widest">Alerte Système</h3>
+            <p className="text-red-400 text-xs font-bold">{loadError}</p>
+          </div>
+        </div>
+      )}
       {status && (
         <div className={`p-4 rounded-2xl border flex items-center gap-3 text-sm animate-in fade-in slide-in-from-top-2 duration-300 ${
           status.type === "success" ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-400" : 
@@ -302,29 +281,8 @@ export default function MedecinDashboard() {
               </div>
             </div>
 
-            <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl space-y-3">
-              <label className="flex items-center justify-between gap-3 text-[10px] text-neutral-400 uppercase font-bold tracking-widest">
-                <span>Upload IPFS chiffré</span>
-                <input
-                  type="checkbox"
-                  checked={enableIpfs}
-                  onChange={(event) => setEnableIpfs(event.target.checked)}
-                  className="h-4 w-4 accent-emerald-500"
-                />
-              </label>
-              {enableIpfs ? (
-                <input
-                  type="password"
-                  value={encryptionPassphrase}
-                  onChange={(event) => setEncryptionPassphrase(event.target.value)}
-                  placeholder="Passphrase de chiffrement (8+ caractères)"
-                  className="w-full p-3 bg-black border border-neutral-800 rounded-xl text-neutral-200 outline-none focus:border-emerald-500/50 transition-all text-sm"
-                />
-              ) : null}
-            </div>
-
             <button 
-              disabled={busy || !patientWallet || (enableIpfs && encryptionPassphrase.trim().length < 8)} 
+              disabled={busy || !patientWallet}
               onClick={createTextPrescription} 
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-30 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
             >

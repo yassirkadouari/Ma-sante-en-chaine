@@ -1,0 +1,2814 @@
+{
+  "source": {
+    "hash": "0x120ea039d156feff3e76fa6d50527488e1bf204f3e6f4465e686e5cf2d928b7c",
+    "language": "ink! 5.1.1",
+    "compiler": "rustc 1.91.0",
+    "build_info": {
+      "build_mode": "Release",
+      "cargo_contract_version": "5.0.3",
+      "rust_toolchain": "stable-x86_64-unknown-linux-gnu",
+      "wasm_opt_settings": {
+        "keep_debug_symbols": false,
+        "optimization_passes": "Z"
+      }
+    }
+  },
+  "contract": {
+    "name": "medical-anchors-contract",
+    "version": "0.1.0",
+    "authors": [
+      "Ma Sante en Chaine"
+    ],
+    "license": "UNLICENSED"
+  },
+  "image": null,
+  "spec": {
+    "constructors": [
+      {
+        "args": [],
+        "default": false,
+        "docs": [],
+        "label": "new",
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink_primitives",
+            "ConstructorResult"
+          ],
+          "type": 32
+        },
+        "selector": "0x9bae9d5e"
+      }
+    ],
+    "docs": [],
+    "environment": {
+      "accountId": {
+        "displayName": [
+          "AccountId"
+        ],
+        "type": 2
+      },
+      "balance": {
+        "displayName": [
+          "Balance"
+        ],
+        "type": 15
+      },
+      "blockNumber": {
+        "displayName": [
+          "BlockNumber"
+        ],
+        "type": 43
+      },
+      "chainExtension": {
+        "displayName": [
+          "ChainExtension"
+        ],
+        "type": 46
+      },
+      "hash": {
+        "displayName": [
+          "Hash"
+        ],
+        "type": 45
+      },
+      "maxEventTopics": 4,
+      "staticBufferSize": 16384,
+      "timestamp": {
+        "displayName": [
+          "Timestamp"
+        ],
+        "type": 4
+      }
+    },
+    "events": [
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "doctor",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "kind",
+            "type": {
+              "displayName": [
+                "RecordKind"
+              ],
+              "type": 7
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "insurer",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 8
+            }
+          }
+        ],
+        "docs": [],
+        "label": "AnchorStored",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0xbfc6f3edd3fe3db4362c29ed859491dd38efac70da5b783a0899f53a7452b02e"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "by",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "docs": [],
+        "label": "AccessGranted",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0x3c1283d4f4b64acd93b8b993b579f6fb19e4ad2f2b58fa64c091851b86b53596"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "by",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "docs": [],
+        "label": "AccessRevoked",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0x2204ef7742205eacf7b14784e01eaf2dcad7fafd327048799b7bd8e03a6284aa"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "status",
+            "type": {
+              "displayName": [
+                "ClaimStatus"
+              ],
+              "type": 19
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "amount_approved",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 18
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "by",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "docs": [],
+        "label": "ClaimReviewed",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0xa9be21c618c0fe86bdd4addb089da4319fff31bb1f8a02b0dd79de73939313bc"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "claimant",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "insurer",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "amount_requested",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 15
+            }
+          }
+        ],
+        "docs": [],
+        "label": "ClaimSubmitted",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0x635374c654e503971000de37b57ec878ce71e1b2ddc540757d67c5fe811b64b8"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "by",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "payment_ref_hash",
+            "type": {
+              "displayName": [
+                "Hash32"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "docs": [],
+        "label": "ClaimReimbursed",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0xc866d34967c7a790477887146c441b4a5bb001b656c6412194c36ba47f642fa8"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "status",
+            "type": {
+              "displayName": [
+                "RecordStatus"
+              ],
+              "type": 9
+            }
+          },
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "by",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "docs": [],
+        "label": "RecordStatusChanged",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0x311bd740cb4fecbbd9c1f2217f39729d6c43396d330f40c531c64c921c86036c"
+      },
+      {
+        "args": [
+          {
+            "docs": [],
+            "indexed": true,
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "docs": [],
+            "indexed": false,
+            "label": "key",
+            "type": {
+              "displayName": [
+                "EncryptionPublicKey"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "docs": [],
+        "label": "EncryptionKeyRegistered",
+        "module_path": "medical_anchors_contract::medical_anchors_contract",
+        "signature_topic": "0x3eb5d3f3200654413af6132a1d86adc4e41197024ac15cbe57586f7b2b29c2a4"
+      }
+    ],
+    "lang_error": {
+      "displayName": [
+        "ink",
+        "LangError"
+      ],
+      "type": 33
+    },
+    "messages": [
+      {
+        "args": [
+          {
+            "label": "key",
+            "type": {
+              "displayName": [
+                "EncryptionPublicKey"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "register_encryption_key",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x8898548c"
+      },
+      {
+        "args": [
+          {
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "encryption_key_of",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 37
+        },
+        "selector": "0x57a7bb51"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "kind",
+            "type": {
+              "displayName": [
+                "RecordKind"
+              ],
+              "type": 7
+            }
+          },
+          {
+            "label": "cid",
+            "type": {
+              "displayName": [
+                "Vec"
+              ],
+              "type": 0
+            }
+          },
+          {
+            "label": "data_hash",
+            "type": {
+              "displayName": [
+                "Hash32"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "owner",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "label": "doctor",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "label": "pharmacy",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 8
+            }
+          },
+          {
+            "label": "insurer",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 8
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "store_anchor",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x82274744"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "grant_access",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0xdc8ccc99"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "revoke_access",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x702cb15a"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "wallet",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "can_read",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 38
+        },
+        "selector": "0x14cbd163"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "candidate_hash",
+            "type": {
+              "displayName": [
+                "Hash32"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "verify_hash",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 38
+        },
+        "selector": "0xa77141f2"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "mark_delivered",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0xedc9a6b3"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "cancel_record",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x80f68a09"
+      },
+      {
+        "args": [
+          {
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "source_record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "insurer",
+            "type": {
+              "displayName": [
+                "AccountId"
+              ],
+              "type": 2
+            }
+          },
+          {
+            "label": "amount_requested",
+            "type": {
+              "displayName": [
+                "Balance"
+              ],
+              "type": 15
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "submit_claim",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0xf02b131c"
+      },
+      {
+        "args": [
+          {
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "approve",
+            "type": {
+              "displayName": [
+                "bool"
+              ],
+              "type": 23
+            }
+          },
+          {
+            "label": "amount_approved",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 18
+            }
+          },
+          {
+            "label": "reason_hash",
+            "type": {
+              "displayName": [
+                "Option"
+              ],
+              "type": 20
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "review_claim",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x9a5362c2"
+      },
+      {
+        "args": [
+          {
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          },
+          {
+            "label": "payment_ref_hash",
+            "type": {
+              "displayName": [
+                "Hash32"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "mark_claim_reimbursed",
+        "mutates": true,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 34
+        },
+        "selector": "0x2176c565"
+      },
+      {
+        "args": [
+          {
+            "label": "record_id",
+            "type": {
+              "displayName": [
+                "RecordId"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "get_anchor",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 39
+        },
+        "selector": "0x8dbbb594"
+      },
+      {
+        "args": [
+          {
+            "label": "claim_id",
+            "type": {
+              "displayName": [
+                "ClaimId"
+              ],
+              "type": 3
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "get_claim",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 41
+        },
+        "selector": "0x648d5065"
+      },
+      {
+        "args": [
+          {
+            "label": "start",
+            "type": {
+              "displayName": [
+                "u32"
+              ],
+              "type": 43
+            }
+          },
+          {
+            "label": "limit",
+            "type": {
+              "displayName": [
+                "u32"
+              ],
+              "type": 43
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "list_record_ids",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 44
+        },
+        "selector": "0x8f9f2030"
+      },
+      {
+        "args": [
+          {
+            "label": "start",
+            "type": {
+              "displayName": [
+                "u32"
+              ],
+              "type": 43
+            }
+          },
+          {
+            "label": "limit",
+            "type": {
+              "displayName": [
+                "u32"
+              ],
+              "type": 43
+            }
+          }
+        ],
+        "default": false,
+        "docs": [],
+        "label": "list_claim_ids",
+        "mutates": false,
+        "payable": false,
+        "returnType": {
+          "displayName": [
+            "ink",
+            "MessageResult"
+          ],
+          "type": 44
+        },
+        "selector": "0xf26e2428"
+      }
+    ]
+  },
+  "storage": {
+    "root": {
+      "layout": {
+        "struct": {
+          "fields": [
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "struct": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0xf74ab7ef",
+                              "name": "RecordKind",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "Prescription"
+                                },
+                                "1": {
+                                  "fields": [],
+                                  "name": "Visit"
+                                },
+                                "2": {
+                                  "fields": [],
+                                  "name": "LabResult"
+                                },
+                                "3": {
+                                  "fields": [],
+                                  "name": "Operation"
+                                },
+                                "4": {
+                                  "fields": [],
+                                  "name": "Other"
+                                }
+                              }
+                            }
+                          },
+                          "name": "kind"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0xf74ab7ef",
+                              "ty": 0
+                            }
+                          },
+                          "name": "cid"
+                        },
+                        {
+                          "layout": {
+                            "array": {
+                              "layout": {
+                                "leaf": {
+                                  "key": "0xf74ab7ef",
+                                  "ty": 1
+                                }
+                              },
+                              "len": 32,
+                              "offset": "0xf74ab7ef"
+                            }
+                          },
+                          "name": "data_hash"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0xf74ab7ef",
+                              "ty": 2
+                            }
+                          },
+                          "name": "owner"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0xf74ab7ef",
+                              "ty": 2
+                            }
+                          },
+                          "name": "doctor"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0xf74ab7ef",
+                              "name": "Option",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "None"
+                                },
+                                "1": {
+                                  "fields": [
+                                    {
+                                      "layout": {
+                                        "leaf": {
+                                          "key": "0xf74ab7ef",
+                                          "ty": 2
+                                        }
+                                      },
+                                      "name": "0"
+                                    }
+                                  ],
+                                  "name": "Some"
+                                }
+                              }
+                            }
+                          },
+                          "name": "pharmacy"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0xf74ab7ef",
+                              "name": "Option",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "None"
+                                },
+                                "1": {
+                                  "fields": [
+                                    {
+                                      "layout": {
+                                        "leaf": {
+                                          "key": "0xf74ab7ef",
+                                          "ty": 2
+                                        }
+                                      },
+                                      "name": "0"
+                                    }
+                                  ],
+                                  "name": "Some"
+                                }
+                              }
+                            }
+                          },
+                          "name": "insurer"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0xf74ab7ef",
+                              "name": "RecordStatus",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "Prescribed"
+                                },
+                                "1": {
+                                  "fields": [],
+                                  "name": "Delivered"
+                                },
+                                "2": {
+                                  "fields": [],
+                                  "name": "Cancelled"
+                                }
+                              }
+                            }
+                          },
+                          "name": "status"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0xf74ab7ef",
+                              "ty": 4
+                            }
+                          },
+                          "name": "created_at"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0xf74ab7ef",
+                              "ty": 4
+                            }
+                          },
+                          "name": "updated_at"
+                        }
+                      ],
+                      "name": "Anchor"
+                    }
+                  },
+                  "root_key": "0xf74ab7ef",
+                  "ty": 5
+                }
+              },
+              "name": "records"
+            },
+            {
+              "layout": {
+                "leaf": {
+                  "key": "0x00000000",
+                  "ty": 14
+                }
+              },
+              "name": "record_index"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "struct": {
+                      "fields": [
+                        {
+                          "layout": {
+                            "array": {
+                              "layout": {
+                                "leaf": {
+                                  "key": "0x2aea8732",
+                                  "ty": 1
+                                }
+                              },
+                              "len": 32,
+                              "offset": "0x2aea8732"
+                            }
+                          },
+                          "name": "source_record_id"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x2aea8732",
+                              "ty": 2
+                            }
+                          },
+                          "name": "claimant"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x2aea8732",
+                              "ty": 2
+                            }
+                          },
+                          "name": "insurer"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x2aea8732",
+                              "ty": 15
+                            }
+                          },
+                          "name": "amount_requested"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0x2aea8732",
+                              "name": "Option",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "None"
+                                },
+                                "1": {
+                                  "fields": [
+                                    {
+                                      "layout": {
+                                        "leaf": {
+                                          "key": "0x2aea8732",
+                                          "ty": 15
+                                        }
+                                      },
+                                      "name": "0"
+                                    }
+                                  ],
+                                  "name": "Some"
+                                }
+                              }
+                            }
+                          },
+                          "name": "amount_approved"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0x2aea8732",
+                              "name": "ClaimStatus",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "Pending"
+                                },
+                                "1": {
+                                  "fields": [],
+                                  "name": "Approved"
+                                },
+                                "2": {
+                                  "fields": [],
+                                  "name": "Rejected"
+                                },
+                                "3": {
+                                  "fields": [],
+                                  "name": "Reimbursed"
+                                }
+                              }
+                            }
+                          },
+                          "name": "status"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0x2aea8732",
+                              "name": "Option",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "None"
+                                },
+                                "1": {
+                                  "fields": [
+                                    {
+                                      "layout": {
+                                        "array": {
+                                          "layout": {
+                                            "leaf": {
+                                              "key": "0x2aea8732",
+                                              "ty": 1
+                                            }
+                                          },
+                                          "len": 32,
+                                          "offset": "0x2aea8732"
+                                        }
+                                      },
+                                      "name": "0"
+                                    }
+                                  ],
+                                  "name": "Some"
+                                }
+                              }
+                            }
+                          },
+                          "name": "reason_hash"
+                        },
+                        {
+                          "layout": {
+                            "enum": {
+                              "dispatchKey": "0x2aea8732",
+                              "name": "Option",
+                              "variants": {
+                                "0": {
+                                  "fields": [],
+                                  "name": "None"
+                                },
+                                "1": {
+                                  "fields": [
+                                    {
+                                      "layout": {
+                                        "array": {
+                                          "layout": {
+                                            "leaf": {
+                                              "key": "0x2aea8732",
+                                              "ty": 1
+                                            }
+                                          },
+                                          "len": 32,
+                                          "offset": "0x2aea8732"
+                                        }
+                                      },
+                                      "name": "0"
+                                    }
+                                  ],
+                                  "name": "Some"
+                                }
+                              }
+                            }
+                          },
+                          "name": "payment_ref_hash"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x2aea8732",
+                              "ty": 4
+                            }
+                          },
+                          "name": "created_at"
+                        },
+                        {
+                          "layout": {
+                            "leaf": {
+                              "key": "0x2aea8732",
+                              "ty": 4
+                            }
+                          },
+                          "name": "updated_at"
+                        }
+                      ],
+                      "name": "Claim"
+                    }
+                  },
+                  "root_key": "0x2aea8732",
+                  "ty": 16
+                }
+              },
+              "name": "claims"
+            },
+            {
+              "layout": {
+                "leaf": {
+                  "key": "0x00000000",
+                  "ty": 14
+                }
+              },
+              "name": "claim_index"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "leaf": {
+                      "key": "0x085fea58",
+                      "ty": 23
+                    }
+                  },
+                  "root_key": "0x085fea58",
+                  "ty": 24
+                }
+              },
+              "name": "access"
+            },
+            {
+              "layout": {
+                "root": {
+                  "layout": {
+                    "array": {
+                      "layout": {
+                        "leaf": {
+                          "key": "0xdb82a9df",
+                          "ty": 1
+                        }
+                      },
+                      "len": 32,
+                      "offset": "0xdb82a9df"
+                    }
+                  },
+                  "root_key": "0xdb82a9df",
+                  "ty": 28
+                }
+              },
+              "name": "encryption_keys"
+            }
+          ],
+          "name": "MedicalAnchorsContract"
+        }
+      },
+      "root_key": "0x00000000",
+      "ty": 31
+    }
+  },
+  "types": [
+    {
+      "id": 0,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 1,
+      "type": {
+        "def": {
+          "primitive": "u8"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 3,
+                "typeName": "[u8; 32]"
+              }
+            ]
+          }
+        },
+        "path": [
+          "ink_primitives",
+          "types",
+          "AccountId"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": {
+        "def": {
+          "array": {
+            "len": 32,
+            "type": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": {
+        "def": {
+          "primitive": "u64"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 3
+          },
+          {
+            "name": "V",
+            "type": 6
+          },
+          {
+            "name": "KeyType",
+            "type": 10
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "kind",
+                "type": 7,
+                "typeName": "RecordKind"
+              },
+              {
+                "name": "cid",
+                "type": 0,
+                "typeName": "Vec<u8>"
+              },
+              {
+                "name": "data_hash",
+                "type": 3,
+                "typeName": "Hash32"
+              },
+              {
+                "name": "owner",
+                "type": 2,
+                "typeName": "AccountId"
+              },
+              {
+                "name": "doctor",
+                "type": 2,
+                "typeName": "AccountId"
+              },
+              {
+                "name": "pharmacy",
+                "type": 8,
+                "typeName": "Option<AccountId>"
+              },
+              {
+                "name": "insurer",
+                "type": 8,
+                "typeName": "Option<AccountId>"
+              },
+              {
+                "name": "status",
+                "type": 9,
+                "typeName": "RecordStatus"
+              },
+              {
+                "name": "created_at",
+                "type": 4,
+                "typeName": "u64"
+              },
+              {
+                "name": "updated_at",
+                "type": 4,
+                "typeName": "u64"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "Anchor"
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "Prescription"
+              },
+              {
+                "index": 1,
+                "name": "Visit"
+              },
+              {
+                "index": 2,
+                "name": "LabResult"
+              },
+              {
+                "index": 3,
+                "name": "Operation"
+              },
+              {
+                "index": 4,
+                "name": "Other"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "RecordKind"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 2
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 2
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "Prescribed"
+              },
+              {
+                "index": 1,
+                "name": "Delivered"
+              },
+              {
+                "index": 2,
+                "name": "Cancelled"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "RecordStatus"
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 12
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "AutoKey"
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "type": {
+        "def": {
+          "tuple": []
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": {
+        "def": {
+          "sequence": {
+            "type": 3
+          }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": {
+        "def": {
+          "primitive": "u128"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 3
+          },
+          {
+            "name": "V",
+            "type": 17
+          },
+          {
+            "name": "KeyType",
+            "type": 21
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 17,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "source_record_id",
+                "type": 3,
+                "typeName": "RecordId"
+              },
+              {
+                "name": "claimant",
+                "type": 2,
+                "typeName": "AccountId"
+              },
+              {
+                "name": "insurer",
+                "type": 2,
+                "typeName": "AccountId"
+              },
+              {
+                "name": "amount_requested",
+                "type": 15,
+                "typeName": "Balance"
+              },
+              {
+                "name": "amount_approved",
+                "type": 18,
+                "typeName": "Option<Balance>"
+              },
+              {
+                "name": "status",
+                "type": 19,
+                "typeName": "ClaimStatus"
+              },
+              {
+                "name": "reason_hash",
+                "type": 20,
+                "typeName": "Option<Hash32>"
+              },
+              {
+                "name": "payment_ref_hash",
+                "type": 20,
+                "typeName": "Option<Hash32>"
+              },
+              {
+                "name": "created_at",
+                "type": 4,
+                "typeName": "u64"
+              },
+              {
+                "name": "updated_at",
+                "type": 4,
+                "typeName": "u64"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "Claim"
+        ]
+      }
+    },
+    {
+      "id": 18,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 15
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 15
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 19,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "Pending"
+              },
+              {
+                "index": 1,
+                "name": "Approved"
+              },
+              {
+                "index": 2,
+                "name": "Rejected"
+              },
+              {
+                "index": 3,
+                "name": "Reimbursed"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "ClaimStatus"
+        ]
+      }
+    },
+    {
+      "id": 20,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 3
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 3
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 21,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 22
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 22,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 23,
+      "type": {
+        "def": {
+          "primitive": "bool"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 25
+          },
+          {
+            "name": "V",
+            "type": 23
+          },
+          {
+            "name": "KeyType",
+            "type": 26
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 25,
+      "type": {
+        "def": {
+          "tuple": [
+            3,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 27
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 27,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 28,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "K",
+            "type": 2
+          },
+          {
+            "name": "V",
+            "type": 3
+          },
+          {
+            "name": "KeyType",
+            "type": 29
+          }
+        ],
+        "path": [
+          "ink_storage",
+          "lazy",
+          "mapping",
+          "Mapping"
+        ]
+      }
+    },
+    {
+      "id": 29,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "L",
+            "type": 11
+          },
+          {
+            "name": "R",
+            "type": 30
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ResolverKey"
+        ]
+      }
+    },
+    {
+      "id": 30,
+      "type": {
+        "def": {
+          "composite": {}
+        },
+        "params": [
+          {
+            "name": "ParentKey",
+            "type": 13
+          }
+        ],
+        "path": [
+          "ink_storage_traits",
+          "impls",
+          "ManualKey"
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "name": "records",
+                "type": 5,
+                "typeName": "<Mapping<RecordId, Anchor> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<4021766903u32,\n()>,>>::Type"
+              },
+              {
+                "name": "record_index",
+                "type": 14,
+                "typeName": "<Vec<RecordId> as::ink::storage::traits::AutoStorableHint<::ink\n::storage::traits::ManualKey<3520007295u32, ()>,>>::Type"
+              },
+              {
+                "name": "claims",
+                "type": 16,
+                "typeName": "<Mapping<ClaimId, Claim> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<847768106u32, ()\n>,>>::Type"
+              },
+              {
+                "name": "claim_index",
+                "type": 14,
+                "typeName": "<Vec<ClaimId> as::ink::storage::traits::AutoStorableHint<::ink\n::storage::traits::ManualKey<1077825223u32, ()>,>>::Type"
+              },
+              {
+                "name": "access",
+                "type": 24,
+                "typeName": "<Mapping<(RecordId, AccountId), bool> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<1491754760u32,\n()>,>>::Type"
+              },
+              {
+                "name": "encryption_keys",
+                "type": 28,
+                "typeName": "<Mapping<AccountId, EncryptionPublicKey> as::ink::storage::traits::\nAutoStorableHint<::ink::storage::traits::ManualKey<3752428251u32,\n()>,>>::Type"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "MedicalAnchorsContract"
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 13
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 13
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 33,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 1,
+                "name": "CouldNotReadInput"
+              }
+            ]
+          }
+        },
+        "path": [
+          "ink_primitives",
+          "LangError"
+        ]
+      }
+    },
+    {
+      "id": 34,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 35
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 35
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 35,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 13
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 36
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 13
+          },
+          {
+            "name": "E",
+            "type": 36
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 36,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "RecordAlreadyExists"
+              },
+              {
+                "index": 1,
+                "name": "RecordNotFound"
+              },
+              {
+                "index": 2,
+                "name": "ClaimAlreadyExists"
+              },
+              {
+                "index": 3,
+                "name": "ClaimNotFound"
+              },
+              {
+                "index": 4,
+                "name": "Unauthorized"
+              },
+              {
+                "index": 5,
+                "name": "InvalidRecordId"
+              },
+              {
+                "index": 6,
+                "name": "InvalidCid"
+              },
+              {
+                "index": 7,
+                "name": "InvalidHash"
+              },
+              {
+                "index": 8,
+                "name": "InvalidTransition"
+              },
+              {
+                "index": 9,
+                "name": "InvalidAmount"
+              },
+              {
+                "index": 10,
+                "name": "InvalidEncryptionKey"
+              }
+            ]
+          }
+        },
+        "path": [
+          "medical_anchors_contract",
+          "medical_anchors_contract",
+          "Error"
+        ]
+      }
+    },
+    {
+      "id": 37,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 20
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 20
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 38,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 23
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 23
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 39,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 40
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 40
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 40,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 6
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 6
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 41,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 42
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 42
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 42,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "index": 0,
+                "name": "None"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 17
+                  }
+                ],
+                "index": 1,
+                "name": "Some"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 17
+          }
+        ],
+        "path": [
+          "Option"
+        ]
+      }
+    },
+    {
+      "id": 43,
+      "type": {
+        "def": {
+          "primitive": "u32"
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": {
+        "def": {
+          "variant": {
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "type": 14
+                  }
+                ],
+                "index": 0,
+                "name": "Ok"
+              },
+              {
+                "fields": [
+                  {
+                    "type": 33
+                  }
+                ],
+                "index": 1,
+                "name": "Err"
+              }
+            ]
+          }
+        },
+        "params": [
+          {
+            "name": "T",
+            "type": 14
+          },
+          {
+            "name": "E",
+            "type": 33
+          }
+        ],
+        "path": [
+          "Result"
+        ]
+      }
+    },
+    {
+      "id": 45,
+      "type": {
+        "def": {
+          "composite": {
+            "fields": [
+              {
+                "type": 3,
+                "typeName": "[u8; 32]"
+              }
+            ]
+          }
+        },
+        "path": [
+          "ink_primitives",
+          "types",
+          "Hash"
+        ]
+      }
+    },
+    {
+      "id": 46,
+      "type": {
+        "def": {
+          "variant": {}
+        },
+        "path": [
+          "ink_env",
+          "types",
+          "NoChainExtension"
+        ]
+      }
+    }
+  ],
+  "version": 5
+}

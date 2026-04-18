@@ -1,0 +1,1 @@
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/ink/release/metadata-gen: /home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/lib.rs /tmp/cargo-contract_JUo0JD/.ink/metadata_gen/main.rs

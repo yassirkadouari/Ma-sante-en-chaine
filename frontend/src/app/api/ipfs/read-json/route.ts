@@ -1,92 +1,132 @@
 import { NextResponse } from "next/server";
 
-const DEFAULT_IPFS_API = "http://127.0.0.1:5001/api/v0";
-const DEFAULT_IPFS_GATEWAY = "https://ipfs.io/ipfs";
-const DEFAULT_PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs";
+const DEFAULT_GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs",
+  "https://ipfs.io/ipfs",
+];
+const READ_RATE_LIMIT_MAX_RETRIES = 2;
+const READ_RATE_LIMIT_BASE_DELAY_MS = 900;
 
-function getIpfsApiBase(): string {
+type ReadRequestBody = {
+  cid?: string;
+};
+
+function normalizeGatewayBase(base: string): string {
+  const trimmed = String(base || "").trim().replace(/\/$/, "");
+  if (!trimmed) return "";
+  if (trimmed.endsWith("/ipfs")) return trimmed;
+  return `${trimmed}/ipfs`;
+}
+
+function configuredGateways(): string[] {
+  const envCandidates = [
+    process.env.IPFS_GATEWAY_URL,
+    process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL,
+  ];
+
+  const merged = [...envCandidates, ...DEFAULT_GATEWAYS]
+    .map((item) => normalizeGatewayBase(String(item || "")))
+    .filter(Boolean);
+
+  return Array.from(new Set(merged));
+}
+
+function isRateLimitMessage(input: string): boolean {
+  const message = String(input || "").toLowerCase();
   return (
-    process.env.IPFS_API_URL ||
-    process.env.NEXT_PUBLIC_IPFS_API_URL ||
-    DEFAULT_IPFS_API
-  ).replace(/\/$/, "");
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("429")
+  );
 }
 
-function isPinataApi(base: string): boolean {
-  return base.toLowerCase().includes("pinata.cloud");
+function isRateLimitStatus(status: number): boolean {
+  return status === 429;
 }
 
-function getIpfsGatewayBase(apiBase: string): string {
-  const configured = process.env.IPFS_GATEWAY_URL || process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL;
-  if (configured) {
-    return configured.replace(/\/$/, "");
-  }
-
-  if (isPinataApi(apiBase)) {
-    return DEFAULT_PINATA_GATEWAY;
-  }
-
-  return DEFAULT_IPFS_GATEWAY;
-}
-
-function buildAuthHeaders(): Record<string, string> {
-  const token = process.env.IPFS_API_TOKEN || process.env.NEXT_PUBLIC_IPFS_API_TOKEN || "";
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function readFromIpfsApiCat(apiBase: string, cid: string): Promise<unknown> {
-  const response = await fetch(`${apiBase}/cat?arg=${encodeURIComponent(cid)}`, {
-    method: "POST",
-    headers: buildAuthHeaders(),
-    cache: "no-store",
+async function wait(ms: number) {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
   });
-
-  if (!response.ok) {
-    throw new Error(`IPFS API cat failed (${response.status}).`);
-  }
-
-  const text = await response.text();
-  return JSON.parse(text);
 }
 
-async function readFromGateway(gatewayBase: string, cid: string): Promise<unknown> {
-  const response = await fetch(`${gatewayBase}/${cid}`, {
-    cache: "no-store",
-  });
+async function fetchJsonWithRetry(url: string): Promise<unknown> {
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`IPFS gateway read failed (${response.status}).`);
+  for (let attempt = 0; attempt <= READ_RATE_LIMIT_MAX_RETRIES; attempt += 1) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+
+      const response = await fetch(url, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => "");
+        const rateLimited = isRateLimitStatus(response.status) || isRateLimitMessage(bodyText);
+
+        if (rateLimited && attempt < READ_RATE_LIMIT_MAX_RETRIES) {
+          const delay = READ_RATE_LIMIT_BASE_DELAY_MS * (attempt + 1);
+          await wait(delay);
+          continue;
+        }
+
+        throw new Error(`Gateway read failed (${response.status}) ${bodyText}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "unknown error");
+      const rateLimited = isRateLimitMessage(message);
+
+      if (rateLimited && attempt < READ_RATE_LIMIT_MAX_RETRIES) {
+        const delay = READ_RATE_LIMIT_BASE_DELAY_MS * (attempt + 1);
+        await wait(delay);
+        continue;
+      }
+
+      lastError = error instanceof Error ? error : new Error(message);
+      break;
+    }
   }
 
-  return await response.json();
+  throw lastError || new Error("Unknown IPFS read error");
 }
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { cid?: string };
+    const body = (await request.json()) as ReadRequestBody;
     const cid = String(body.cid || "").trim();
+
     if (!cid) {
       return NextResponse.json({ error: "cid is required" }, { status: 400 });
     }
 
-    const apiBase = getIpfsApiBase();
-    const gatewayBase = getIpfsGatewayBase(apiBase);
+    const gateways = configuredGateways();
+    const failures: string[] = [];
 
-    // Prefer direct read from the configured IPFS API for immediate availability,
-    // then fallback to gateway for hosted providers.
-    if (!isPinataApi(apiBase)) {
+    for (const gateway of gateways) {
+      const url = `${gateway}/${cid}`;
       try {
-        const payload = await readFromIpfsApiCat(apiBase, cid);
-        return NextResponse.json({ payload, source: "ipfs-api" });
-      } catch {
-        // Fallback to gateway below.
+        const payload = await fetchJsonWithRetry(url);
+        return NextResponse.json({ payload });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error || "unknown error");
+        failures.push(`${gateway}: ${message}`);
       }
     }
 
-    const payload = await readFromGateway(gatewayBase, cid);
-    return NextResponse.json({ payload, source: "gateway" });
+    return NextResponse.json(
+      {
+        error: `IPFS read failed for ${cid}. Tried gateways: ${failures.join(" | ")}`,
+      },
+      { status: 502 }
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "IPFS read error";
-    return NextResponse.json({ error: message }, { status: 502 });
+    const message = error instanceof Error ? error.message : "IPFS read proxy error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

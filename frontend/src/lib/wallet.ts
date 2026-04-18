@@ -5,6 +5,7 @@ type InjectedExtension = {
     };
     signer?: {
       signRaw?: (payload: { address: string; data: string; type: "bytes" }) => Promise<{ signature: string }>;
+      signPayload?: (payload: Record<string, unknown>) => Promise<{ signature: string }>;
     };
   }>;
 };
@@ -33,6 +34,15 @@ async function getExtension() {
   return injected.enable(APP_NAME);
 }
 
+type WalletSignerContext = {
+  walletAddress: string;
+  signer: {
+    signRaw?: (payload: { address: string; data: string; type: "bytes" }) => Promise<{ signature: string }>;
+    signPayload?: (payload: Record<string, unknown>) => Promise<{ signature: string }>;
+  };
+  signRaw: (payload: { address: string; data: string; type: "bytes" }) => Promise<{ signature: string }>;
+};
+
 export async function connectWallet() {
   const extension = await getExtension();
   const accounts = await extension.accounts.get();
@@ -44,13 +54,28 @@ export async function connectWallet() {
   return { walletAddress: accounts[0].address };
 }
 
-export async function signMessage(walletAddress: string, message: string) {
+export async function getWalletSignerContext(): Promise<WalletSignerContext> {
   const extension = await getExtension();
-  const signRaw = extension.signer?.signRaw;
+  const accounts = await extension.accounts.get();
 
+  if (!accounts.length) {
+    throw new Error("No wallet account available in Polkadot extension");
+  }
+
+  const signRaw = extension.signer?.signRaw;
   if (!signRaw) {
     throw new Error("Polkadot extension signer is unavailable");
   }
+
+  return {
+    walletAddress: accounts[0].address,
+    signer: extension.signer || {},
+    signRaw,
+  };
+}
+
+export async function signMessage(walletAddress: string, message: string) {
+  const { signRaw } = await getWalletSignerContext();
 
   const response = await signRaw({
     address: walletAddress,

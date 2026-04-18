@@ -7,8 +7,9 @@ import {
   CheckCircle2, Clock, AlertCircle, TrendingUp, Info
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
-import { loadSession } from "@/lib/session";
+import { downloadJsonFromIpfs } from "@/lib/ipfsClient";
 import { decryptMedicalPayload, type EncryptedPayload } from "@/lib/medicalCrypto";
+import { resolveWalletIdentityOnChain } from "@/lib/onchainIdentity";
 import { QRCodeSVG } from "qrcode.react";
 
 type PrescriptionSummary = {
@@ -89,15 +90,16 @@ export default function PatientDashboard() {
   const [newDoctorWallet, setNewDoctorWallet] = useState("");
   const [selectedPresc, setSelectedPresc] = useState<PrescriptionSummary | null>(null);
   const [selectedPrescDetails, setSelectedPrescDetails] = useState<PrescriptionDetails | null>(null);
-  const [prescriptionPassphrase, setPrescriptionPassphrase] = useState("");
   const [loadingSelectedPresc, setLoadingSelectedPresc] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [selectedEventDetails, setSelectedEventDetails] = useState<any | null>(null);
   const [identityByWallet, setIdentityByWallet] = useState<Record<string, WalletIdentity>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
+      setLoadError(null);
       const [prescriptions, mine, claimRows] = await Promise.all([
         apiRequest<{ items: PrescriptionSummary[] }>({ path: "/prescriptions" }),
         apiRequest<MedicalMine>({ path: "/medical-events/mine" }),
@@ -108,6 +110,12 @@ export default function PatientDashboard() {
       setClaims(claimRows.items || []);
     } catch (err: any) {
       console.error(err);
+      const msg = String(err?.message || "");
+      if (msg.toLowerCase().includes("contractnotfound") || msg.toLowerCase().includes("contract unavailable")) {
+        setLoadError("Le contrat blockchain est indisponible. Vérifiez que le nœud Substrate est actif et que le contrat est déployé.");
+      } else {
+        setLoadError(msg || "Erreur de chargement des données.");
+      }
     }
   };
 
@@ -120,17 +128,7 @@ export default function PatientDashboard() {
     if (!wallet) return {};
 
     try {
-      const response = await fetch(`/api/identity/resolve/${encodeURIComponent(wallet)}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) return {};
-
-      const payload = (await response.json()) as {
-        fullName?: string | null;
-        cabinetName?: string | null;
-        institutionName?: string | null;
-        departmentName?: string | null;
-      };
+      const payload = await resolveWalletIdentityOnChain(wallet);
 
       return {
         fullName: payload.fullName || null,
@@ -181,7 +179,7 @@ export default function PatientDashboard() {
   }, [items, medical, identityByWallet, resolveWalletIdentity]);
 
   const loadSelectedPrescription = useCallback(
-    async (passphrase?: string) => {
+    async () => {
       if (!selectedPresc) {
         setSelectedPrescDetails(null);
         return;
@@ -189,10 +187,8 @@ export default function PatientDashboard() {
 
       try {
         setLoadingSelectedPresc(true);
-        const key = String(passphrase || "").trim();
-        const query = key ? `?passphrase=${encodeURIComponent(key)}` : "";
         const details = await apiRequest<PrescriptionDetails>({
-          path: `/prescriptions/${selectedPresc.recordId}${query}`
+          path: `/prescriptions/${selectedPresc.recordId}`
         });
         setSelectedPrescDetails(details);
       } catch (error: any) {
@@ -208,10 +204,6 @@ export default function PatientDashboard() {
   useEffect(() => {
     loadSelectedPrescription();
   }, [loadSelectedPrescription]);
-
-  useEffect(() => {
-    setPrescriptionPassphrase("");
-  }, [selectedPresc?.recordId]);
 
   const changeDoctor = async () => {
     try {
@@ -290,11 +282,11 @@ export default function PatientDashboard() {
     if (!value || typeof value !== "object") return false;
     const item = value as Record<string, unknown>;
     return (
-      String(item.version || "") === "msce-aes-256-gcm-v1" &&
+      String(item.version || "") === "msce-hybrid-aesgcm-v2" &&
       String(item.algorithm || "") === "AES-GCM" &&
-      typeof item.saltB64 === "string" &&
       typeof item.ivB64 === "string" &&
-      typeof item.ciphertextB64 === "string"
+      typeof item.ciphertextB64 === "string" &&
+      Array.isArray(item.encryptedKeys)
     );
   };
 
@@ -330,24 +322,9 @@ export default function PatientDashboard() {
   const readPdfBlobFromIpfsDocument = async (cid: string): Promise<{ blob: Blob; fileName: string } | null> => {
     if (!cid) return null;
 
-    const response = await fetch("/api/ipfs/read-json", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ cid }),
-    });
-
-    const payload = (await response.json()) as { payload?: unknown; error?: string };
-    if (!response.ok || payload.payload === undefined) {
-      throw new Error(payload.error || "Lecture IPFS impossible");
-    }
-
-    let documentPayload = payload.payload;
+    let documentPayload = await downloadJsonFromIpfs<unknown>(cid);
     if (looksLikeEncryptedPayload(documentPayload)) {
-      const passphrase = window.prompt("Ce document est chiffre. Entrez la passphrase pour ouvrir le PDF.") || "";
-      if (!passphrase.trim()) {
-        throw new Error("Passphrase requise pour ouvrir ce document.");
-      }
-      documentPayload = await decryptMedicalPayload<Record<string, unknown>>(documentPayload, passphrase.trim());
+      documentPayload = await decryptMedicalPayload<Record<string, unknown>>(documentPayload);
     }
 
     if (!documentPayload || typeof documentPayload !== "object") {
@@ -371,41 +348,20 @@ export default function PatientDashboard() {
 
     try {
       if (cid) {
-        try {
-          const ipfsPdf = await readPdfBlobFromIpfsDocument(cid);
-          if (ipfsPdf) {
-            triggerDownload(ipfsPdf.blob, ipfsPdf.fileName);
-            return;
-          }
-        } catch (error: any) {
-          const message = String(error?.message || "").toLowerCase();
-          if (message.includes("passphrase")) {
-            throw error;
-          }
+        const ipfsPdf = await readPdfBlobFromIpfsDocument(cid);
+        if (ipfsPdf) {
+          triggerDownload(ipfsPdf.blob, ipfsPdf.fileName);
+          return;
         }
       }
 
-      if (!pathOrUrl) {
-        throw new Error("Document introuvable");
-      }
-
-      const session = loadSession();
       const isAbsolute = /^https?:\/\//i.test(pathOrUrl);
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      const url = isAbsolute ? pathOrUrl : `${base}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
-
       if (isAbsolute) {
-        window.open(url, "_blank", "noopener,noreferrer");
+        window.open(pathOrUrl, "_blank", "noopener,noreferrer");
         return;
       }
 
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${session?.token || ""}` }
-      });
-      if (!res.ok) throw new Error("Fichier introuvable");
-
-      const blob = await res.blob();
-      triggerDownload(blob, `document-${Date.now()}.pdf`);
+      throw new Error("Document IPFS introuvable ou non lisible.");
     } catch (error: any) {
       setStatus({ type: "error", msg: error?.message || "Impossible de telecharger le document." });
     }
@@ -470,7 +426,14 @@ export default function PatientDashboard() {
             </div>
           </div>
 
-          <div className="bg-neutral-950/80 p-6 rounded-3xl border border-blue-500/20 min-w-[320px] shadow-inner">
+          {loadError && (
+            <div className="absolute top-full left-0 right-0 mt-4 p-4 bg-red-950/40 border border-red-500/30 rounded-2xl flex items-center gap-4 z-20">
+              <AlertCircle className="text-red-500 shrink-0" size={24} />
+              <p className="text-red-400 text-xs font-bold">{loadError}</p>
+            </div>
+          )}
+
+          <div className="bg-neutral-950/80 p-6 rounded-3xl border border-blue-500/20 min-w-[320px] shadow-inner mt-16 md:mt-0">
              <h3 className="text-[10px] text-neutral-400 font-black uppercase mb-4 flex items-center gap-2">
                <Stethoscope size={14} className="text-blue-500" /> Gestion Médecin Traitant
              </h3>
@@ -649,22 +612,10 @@ export default function PatientDashboard() {
                        {selectedPrescDetails?.contentState === "ENCRYPTED_LOCKED" ? (
                          <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-2xl space-y-3">
                            <p className="text-[9px] text-neutral-500 font-black uppercase tracking-[0.15em]">Dechiffrement</p>
-                           <div className="flex gap-2">
-                             <input
-                               type="password"
-                               value={prescriptionPassphrase}
-                               onChange={(event) => setPrescriptionPassphrase(event.target.value)}
-                               placeholder="Passphrase ordonnance"
-                               className="flex-1 bg-white border border-neutral-300 p-2.5 rounded-xl text-[10px] text-neutral-900 outline-none focus:border-emerald-500/60 transition-all font-mono"
-                             />
-                             <button
-                               onClick={() => loadSelectedPrescription(prescriptionPassphrase)}
-                               disabled={loadingSelectedPresc || !prescriptionPassphrase.trim()}
-                               className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider disabled:opacity-40"
-                             >
-                               Dechiffrer
-                             </button>
-                           </div>
+                           <p className="text-[10px] text-neutral-700 font-mono leading-relaxed">
+                             Le contenu est chiffre pour des wallets autorises. Connectez le wallet destinataire (patient,
+                             medecin ou pharmacie autorisee) puis rechargez cette ordonnance.
+                           </p>
                          </div>
                        ) : null}
                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">

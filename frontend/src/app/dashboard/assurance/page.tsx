@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShieldCheck, CheckCircle2, XCircle, Landmark, Activity, FileSearch, AlertCircle, Search } from "lucide-react";
+import { ShieldCheck, CheckCircle2, XCircle, Landmark, Activity, FileSearch, AlertCircle, Search, Hospital, Beaker } from "lucide-react";
 import { apiRequest } from "../../../lib/api";
 
 type ClaimItem = {
@@ -32,8 +32,6 @@ const SOURCE_ICONS: any = {
   HOSPITAL_STAY: Hospital
 };
 
-import { Hospital, Beaker } from "lucide-react";
-
 export default function AssuranceDashboard() {
   const [items, setItems] = useState<ClaimItem[]>([]);
   const [statusFilter, setStatusFilter] = useState("PENDING");
@@ -42,15 +40,23 @@ export default function AssuranceDashboard() {
   const [targetClaim, setTargetClaim] = useState<ClaimItem | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "error", msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
+      setLoadError(null);
       const response = await apiRequest<{ items: ClaimItem[] }>({ 
         path: `/claims?status=${statusFilter === "ALL" ? "" : statusFilter}` 
       });
       setItems(response.items || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const msg = String(err?.message || "");
+      if (msg.toLowerCase().includes("contractnotfound") || msg.toLowerCase().includes("contract unavailable")) {
+        setLoadError("Le contrat blockchain est indisponible. Vérifiez que le nœud Substrate est actif et que le contrat est déployé.");
+      } else {
+        setLoadError(msg || "Erreur de chargement des données.");
+      }
     }
   }, [statusFilter]);
 
@@ -126,6 +132,18 @@ export default function AssuranceDashboard() {
           </div>
         </div>
       </div>
+
+      {loadError && (
+        <div className="p-6 bg-red-950/40 border border-red-500/30 rounded-[2rem] flex items-center gap-4">
+          <div className="p-3 bg-red-500/10 rounded-xl">
+            <AlertCircle className="text-red-500 shrink-0" size={24} />
+          </div>
+          <div>
+            <h3 className="text-red-400 font-black uppercase text-sm mb-1 tracking-widest">Alerte Système</h3>
+            <p className="text-red-400 text-xs font-bold">{loadError}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main List */}

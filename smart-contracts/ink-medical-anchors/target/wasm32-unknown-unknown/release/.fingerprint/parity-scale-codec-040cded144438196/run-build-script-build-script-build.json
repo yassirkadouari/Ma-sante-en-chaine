@@ -1,0 +1,1 @@
+{"rustc":16459734408273336474,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[2161086476230812269,"build_script_build",false,8080062022739254006]],"local":[{"Precalculated":"3.7.5"}],"rustflags":["-Ctarget-cpu=mvp","-Clink-arg=--import-memory","-Clink-arg=-zstack-size=65536","-Cpanic=abort"],"config":0,"compile_kind":0}

@@ -69,7 +69,6 @@ export default function AdminDashboard() {
       await apiRequest({
         method: "POST",
         path: "/admin/users",
-        signed: true,
         body: {
           walletAddress,
           role,
@@ -94,7 +93,6 @@ export default function AdminDashboard() {
       await apiRequest({
         method: "DELETE",
         path: "/admin/users",
-        signed: true,
         body: {
           walletAddress,
           role
@@ -116,7 +114,6 @@ export default function AdminDashboard() {
       await apiRequest({
         method: "PATCH",
         path: "/admin/users/institution",
-        signed: true,
         body: {
           walletAddress,
           role,
@@ -140,7 +137,6 @@ export default function AdminDashboard() {
       await apiRequest({
         method: "PATCH",
         path: "/admin/users/approval",
-        signed: true,
         body: {
           walletAddress: targetWallet,
           approved

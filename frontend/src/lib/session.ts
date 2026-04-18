@@ -19,20 +19,51 @@ export type Session = {
   } | null;
 };
 
-const KEY = "msc_session";
+const KEY = "msc_session_v2";
+let inMemorySession: Session | null = null;
+
+function normalizeSession(input: Session | null): Session | null {
+  if (!input) return null;
+  return {
+    ...input,
+    token: input.token || "wallet-signed-session",
+  };
+}
 
 export function saveSession(session: Session) {
-  localStorage.setItem(KEY, JSON.stringify(session));
+  const normalized = normalizeSession(session);
+  inMemorySession = normalized;
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(KEY, JSON.stringify(normalized));
+  } catch {
+    // Ignore storage quota/privacy mode failures and keep in-memory fallback.
+  }
 }
 
 export function loadSession(): Session | null {
-  const raw = localStorage.getItem(KEY);
-  if (!raw) {
+  if (inMemorySession) {
+    return inMemorySession;
+  }
+
+  if (typeof window === "undefined") {
     return null;
   }
 
   try {
-    return JSON.parse(raw) as Session;
+    const raw = localStorage.getItem(KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Session;
+    const normalized = normalizeSession(parsed);
+    inMemorySession = normalized;
+    return normalized;
   } catch {
     localStorage.removeItem(KEY);
     return null;
@@ -40,5 +71,15 @@ export function loadSession(): Session | null {
 }
 
 export function clearSession() {
-  localStorage.removeItem(KEY);
+  inMemorySession = null;
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Ignore storage failures.
+  }
 }

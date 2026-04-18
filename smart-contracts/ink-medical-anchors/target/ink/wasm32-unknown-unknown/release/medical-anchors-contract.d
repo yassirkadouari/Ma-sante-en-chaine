@@ -1,0 +1,1 @@
+/home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/target/ink/wasm32-unknown-unknown/release/medical-anchors-contract.wasm: /home/ramsis/Desktop/DOCUMENTATION/ma-sante-en-chaine/smart-contracts/ink-medical-anchors/lib.rs

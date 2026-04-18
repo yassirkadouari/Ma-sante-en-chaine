@@ -55,11 +55,11 @@ export default function PharmacieDashboard() {
   const [busy, setBusy] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Archive Search State
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
-  const [prescriptionPassphrase, setPrescriptionPassphrase] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
 
@@ -306,10 +306,17 @@ export default function PharmacieDashboard() {
 
   const refresh = async () => {
     try {
+      setLoadError(null);
       const response = await apiRequest<{ items: PrescriptionSummary[] }>({ path: "/prescriptions" });
       setItems(response.items);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const msg = String(err?.message || "");
+      if (msg.toLowerCase().includes("contractnotfound") || msg.toLowerCase().includes("contract unavailable")) {
+        setLoadError("Le contrat blockchain est indisponible. Vérifiez que le nœud Substrate est actif et que le contrat est déployé.");
+      } else {
+        setLoadError(msg || "Erreur de chargement des données.");
+      }
     }
   };
 
@@ -330,16 +337,13 @@ export default function PharmacieDashboard() {
         setRecordId(normalizedRecordId);
       }
 
-      const passphrase = prescriptionPassphrase.trim();
-      const query = passphrase ? `?passphrase=${encodeURIComponent(passphrase)}` : "";
-
       const response = await apiRequest<PrescriptionDetails>({
-        path: `/prescriptions/${normalizedRecordId}${query}`,
+        path: `/prescriptions/${normalizedRecordId}`,
         signed: true
       });
       setDetails(response);
       if (response.contentState === "ENCRYPTED_LOCKED") {
-        setStatus({ type: "info", msg: "Ordonnance chiffrée: saisissez la passphrase pour afficher les médicaments." });
+        setStatus({ type: "info", msg: "Ordonnance chiffrée: connectez un wallet autorise puis rechargez." });
       } else {
         setStatus({ type: "success", msg: "Ordonnance chargée et vérifiée via Blockchain." });
       }
@@ -418,6 +422,18 @@ export default function PharmacieDashboard() {
         </div>
       </div>
 
+      {loadError && (
+        <div className="p-6 bg-red-950/40 border border-red-500/30 rounded-[2rem] flex items-center gap-4">
+          <div className="p-3 bg-red-500/10 rounded-xl">
+            <AlertCircle className="text-red-500 shrink-0" size={24} />
+          </div>
+          <div>
+            <h3 className="text-red-400 font-black uppercase text-sm mb-1 tracking-widest">Alerte Système</h3>
+            <p className="text-red-400 text-xs font-bold">{loadError}</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Verification Section */}
         <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-800 space-y-6 shadow-xl hover:border-violet-500/30 transition-all">
@@ -438,17 +454,6 @@ export default function PharmacieDashboard() {
                   className="w-full p-4 pl-10 bg-black border border-neutral-800 rounded-2xl text-violet-400 outline-none focus:border-violet-500/50 transition-all text-sm font-mono"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-black mb-1 block">Passphrase (si ordonnance chiffrée)</label>
-              <input
-                type="password"
-                value={prescriptionPassphrase}
-                onChange={(event) => setPrescriptionPassphrase(event.target.value)}
-                placeholder="Laisser vide si non chiffrée"
-                className="w-full p-4 bg-black border border-neutral-800 rounded-2xl text-violet-300 outline-none focus:border-violet-500/50 transition-all text-sm font-mono"
-              />
             </div>
 
             <button 
