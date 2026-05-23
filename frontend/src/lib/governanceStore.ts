@@ -107,7 +107,7 @@ export function listGovernanceAssignmentsForWallet(walletAddress: string): Gover
   const wallet = normalizeWallet(walletAddress);
   if (!wallet) return [];
 
-  return listGovernanceAssignments().filter((entry) => normalizeWallet(entry.walletAddress) === wallet);
+  return listGovernanceAssignments().filter((entry) => normalizeWallet(entry.walletAddress).toLowerCase() === wallet.toLowerCase());
 }
 
 export function listGovernanceWallets(): string[] {

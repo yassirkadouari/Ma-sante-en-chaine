@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma Santé en Chaîne - Spécifications Techniques Intégrales & Cadrage de Production</title>
+  <!-- Google Fonts & Fira Code for technical details -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #020306;
+      --bg-card: rgba(6, 10, 20, 0.9);
+      --border-card: rgba(255, 255, 255, 0.07);
+      --primary: #10b981; /* Emerald green */
+      --primary-glow: rgba(16, 185, 129, 0.2);
+      --secondary: #3b82f6; /* Tech Blue */
+      --accent: #f59e0b; /* Amber */
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1; /* Increased contrast for class reading */
+      --card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+    }
+
+    /* Ambient background glowing elements */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(150px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.18;
+      transition: all 1.5s ease-in-out;
+    }
+
+    .orb-1 {
+      width: 800px;
+      height: 800px;
+      background: var(--primary);
+      top: -300px;
+      left: -200px;
+    }
+
+    .orb-2 {
+      width: 900px;
+      height: 900px;
+      background: var(--secondary);
+      bottom: -350px;
+      right: -200px;
+    }
+
+    /* 100% Fullscreen Viewport styling */
+    .app-container {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      padding: 12px 20px;
+    }
+
+    /* Top Navigation bar */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      height: 44px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .project-badge {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.15);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Fullscreen viewport */
+    .presentation-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      perspective: 1500px;
+      height: calc(100vh - 110px);
+    }
+
+    .slide {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-card);
+      backdrop-filter: blur(40px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: none;
+      flex-direction: column;
+      justify-content: flex-start; /* Compact layout to prevent artificial vertical spacing */
+      gap: 10px;
+      position: absolute;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      opacity: 0;
+      transform: scale(0.99) translateZ(-40px);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      display: flex;
+      opacity: 1;
+      transform: scale(1) translateZ(0);
+      z-index: 5;
+    }
+
+    /* Headers */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+      margin-bottom: 4px;
+    }
+
+    .slide-category {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .slide-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-index-indicator {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 12px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* Scrollbar styling */
+    .slide-content::-webkit-scrollbar {
+      width: 4px;
+    }
+    .slide-content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.01);
+    }
+    .slide-content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+    }
+
+    /* Dense Grids */
+    .layout-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .layout-split-uneven {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .layout-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 100%;
+    }
+
+    .layout-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+
+    /* Premium components for high density texts */
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 10%, #a7f3d0 60%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .hero-subtitle {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--card-gradient);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 12px 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .card-desc strong {
+      color: #fff;
+    }
+
+    .accent-card {
+      background: rgba(245, 158, 11, 0.01);
+      border-color: rgba(245, 158, 11, 0.08);
+    }
+
+    .code-term {
+      font-family: 'Fira Code', monospace;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: #3b82f6;
+      font-size: 10px;
+    }
+
+    /* List view components */
+    .detail-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .detail-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+
+    .detail-bullet {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 5px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--primary);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .detail-text-box {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .detail-title {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: #fff;
+    }
+
+    .detail-desc {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .large-stat {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 2px;
+    }
+
+    /* Gantt structural chart styling */
+    .gantt-chart {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gantt-months-header {
+      display: grid;
+      grid-template-columns: 280px repeat(8, 1fr);
+      padding-bottom: 4px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 8px;
+      letter-spacing: 1px;
+    }
+
+    .month-col {
+      text-align: center;
+    }
+
+    .gantt-row {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .gantt-row:last-child {
+      border-bottom: none;
+    }
+
+    .gantt-label {
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 10.5px;
+    }
+
+    .gantt-timeline-container {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      height: 14px;
+    }
+
+    .gantt-bar {
+      grid-column: span 1;
+      height: 100%;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .gantt-bar.active-primary {
+      background: linear-gradient(90deg, var(--primary), #059669);
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.2);
+    }
+
+    .gantt-bar.active-secondary {
+      background: linear-gradient(90deg, var(--secondary), #2563eb);
+      box-shadow: 0 0 6px rgba(59, 130, 246, 0.2);
+    }
+
+    .gantt-bar.active-accent {
+      background: linear-gradient(90deg, var(--accent), #d97706);
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
+    }
+
+    /* Tables */
+    .table-data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+    }
+
+    .table-data th {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      color: var(--primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 9px;
+      letter-spacing: 1px;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .table-data td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .table-data tr:hover td {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Code Block components */
+    .code-block {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      color: #a7f3d0;
+      overflow-x: auto;
+      line-height: 1.4;
+      width: 100%;
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+      stroke: var(--primary);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .accent-icon { stroke: var(--accent); }
+    .secondary-icon { stroke: var(--secondary); }
+
+    /* Controls at the bottom */
+    .controls-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      height: 40px;
+      z-index: 20;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      margin: 0 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      border-radius: 8px;
+      transition: width 0.3s ease;
+    }
+
+    .btn-nav {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-card);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-nav:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+      transform: scale(1.05);
+    }
+
+    .slide-counter {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* Speaker Notes collapsible panel */
+    .notes-toggle {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-card);
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .notes-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .notes-panel {
+      position: fixed;
+      bottom: -320px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100vw - 40px);
+      height: 150px;
+      background: rgba(4, 6, 12, 0.98);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      z-index: 100;
+      padding: 12px 18px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(25px);
+      transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .notes-panel.open {
+      bottom: 0;
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 4px;
+    }
+
+    .notes-title {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .notes-close {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 10px;
+    }
+
+    .notes-content {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      overflow-y: auto;
+      height: 90px;
+    }
+
+    .pulse {
+      animation: pulse-glow 3.5s infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+      }
+      50% {
+        box-shadow: 0 4px 24px rgba(16, 185, 129, 0.55);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient glowing background orbs -->
+  <div class="orb orb-1" id="orb1"></div>
+  <div class="orb orb-2" id="orb2"></div>
+
+  <div class="app-container">
+    
+    <!-- Topbar Navigation -->
+    <header>
+      <div class="logo-container">
+        <div class="logo-icon pulse">M</div>
+        <div class="logo-text">Ma Santé en Chaîne</div>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <button class="notes-toggle" onclick="toggleNotes()">
+          <svg class="icon" style="stroke: currentColor; width:12px; height:12px;" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          Notes Orateur
+        </button>
+        <span class="project-badge">Dossier de Spécifications Techniques & Cadrage</span>
+      </div>
+    </header>
+
+    <!-- Presentation Viewport Area -->
+    <div class="presentation-viewport">
+
+      <!-- SLIDE 1: COVER & INSTITUTIONAL SETTING -->
+      <div class="slide active" id="slide-1" data-notes="Bonjour chers membres du jury. Nous sommes fiers de vous présenter aujourd'hui le projet de fin d'études 'Ma Santé en Chaîne'. Face à la numérisation croissante de la société marocaine et dans le cadre de la généralisation historique de la couverture médicale obligatoire (l'AMO) ciblant plus de 45 millions de marocains, la sécurisation et la rapidité du traitement des dossiers médicaux sont indispensables. Nous avons conçu et implémenté un système hybride décentralisé et de confiance. Ce système s'appuie sur la blockchain Substrate, les smart contracts Rust ink! compilés en WebAssembly, et sur la technologie IPFS pour le stockage décentralisé et chiffré des métadonnées de santé. Cette présentation décrit l'ensemble de notre cahier des charges opérationnel.">
+        <div class="slide-header">
+          <div class="slide-category">Introduction Générale & Cadrage</div>
+          <span class="slide-index-indicator">Slide 1 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <h1 class="hero-title">Ma Santé en Chaîne</h1>
+            <p class="hero-subtitle">
+              Cahier des Charges Intégral et Spécifications Opérationnelles pour une Infrastructure Décentralisée de Traçabilité des Actes Médicaux et d'Automatisation de Prise en Charge AMO sur Blockchain WASM & IPFS au Royaume du Maroc.
+            </p>
+            
+            <div class="layout-grid-3">
+              <div class="card">
+                <div class="card-title">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  Confiance On-Chain Immuable
+                </div>
+                <p class="card-desc">
+                  Chaque prescription ou événement médical est haché via <strong>SHA-256</strong> et inscrit cryptographiquement sur le registre distribué d'une blockchain <strong>Substrate</strong> souveraine.
+                  <br><br>
+                  Le registre décentralisé garantit la non-répudiation des consentements et l'inviolabilité absolue des dossiers de soins, rendant impossible toute altération malveillante a posteriori par une autorité tierce ou un administrateur système compromis.
+                </p>
+              </div>
+              <div class="card">
+                <div class="card-title">
+                  <svg class="icon secondary-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  Confidentialité Off-Chain GCM
+                </div>
+                <p class="card-desc">
+                  Les dossiers de soins complets sont chiffrés localement via **AES-GCM-256** côté client et stockés de façon distribuée sur des grappes de nœuds **IPFS** avec réplication.
+                  <br><br>
+                  Cette approche hybride sépare hermétiquement l'identité publique des utilisateurs de leurs données cliniques intimes. La conformité réglementaire avec la directive de la CNDP est ainsi rigoureusement respectée sans dégrader les performances.
+                </p>
+              </div>
+              <div class="card accent-card">
+                <div class="card-title" style="color: var(--accent);">
+                  <svg class="icon accent-icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                  Tiers-Payant Instantané Rust
+                </div>
+                <p class="card-desc">
+                  Automatisation complète du cycle de vie du remboursement de couverture par exécution déterministe de Smart Contracts compilés en **Rust ink! WebAssembly**.
+                  <br><br>
+                  Les quotes-parts d'assurance de la CNSS et de la CNOPS sont calculées en temps réel lors du scan de délivrance en officine. Les processus administratifs longs et coûteux sont remplacés par des mécanismes de consensus mathématiques.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+          <span>👤 <strong>Auteurs :</strong> Yassir Kadouari, Marouane Ismaili, Matine Elkasbiji</span>
+          <span>📅 PFA Académique - Session de Juin 2026</span>
+          <span>🇲🇦 Souveraineté Numérique Nationale & Protection CNDP</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: CONTEXTE ET DIAGNOSTIC DES DEFAILLANCES -->
+      <div class="slide" id="slide-2" data-notes="Pour bien appréhender les défis technologiques, analysons d'abord le diagnostic structurel de notre système de santé national. Actuellement au Maroc, le parcours de soins repose sur des supports papier fragmentés et peu sécurisés. Il n'existe pas de Dossier Médical Partagé unifié entre les hôpitaux publics, les cliniques privées, les pharmacies d'officine et les organismes d'assurance. Cette fragmentation génère des pertes considérables d'historique médical, augmentant le risque d'erreurs médicamenteuses. D'autre part, la falsification matérielle de feuilles d'assurance et d'ordonnances entraîne des fuites de plusieurs milliards de centimes par an pour la CNSS et la CNOPS, alors que le patient subit des délais administratifs de remboursement excessifs atteignant souvent plusieurs semaines.">
+        <div class="slide-header">
+          <div class="slide-category">Le Cadrage National</div>
+          <h2 class="slide-title">Contexte National & Diagnostic Structurel des Défaillances</h2>
+          <span class="slide-index-indicator">Slide 2 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="detail-list">
+              <div class="detail-item">
+                <div class="detail-bullet">01</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Fragmentation & Non-Interopérabilité Critique</span>
+                  <span class="detail-desc">
+                    L'absence d'un Dossier Médical Partagé (DMP) unifié force la redondance d'examens médicaux et augmente les risques d'interactions médicamenteuses néfastes. Les données de santé des assurés demeurent cloisonnées dans des silos applicatifs propriétaires au sein des cliniques ou consignées sur des carnets de santé physiques en papier facilement égarables.
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">02</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Fuite Budgétaire via Fraude aux Prestations</span>
+                  <span class="detail-desc">
+                    Falsification d'ordonnances, déclarations d'actes fictifs et surfacturation d'actes cliniques. L'incapacité des organismes d'assurance maladie à vérifier l'authenticité et la concomitance temporelle des feuilles de soins physiques entraîne des fuites financières massives pour la <strong>CNSS</strong> et la <strong>CNOPS</strong>, grevant l'équilibre de la protection sociale.
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">03</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Latence Administrative dans le Tiers-Payant</span>
+                  <span class="detail-desc">
+                    La gestion et le contrôle documentaire manuel des dossiers physiques de remboursement engendrent des processus administratifs très longs. Les officines de pharmacie subissent des délais de recouvrement de **30 à 60 jours**, ce qui affecte directement leur trésorerie et la satisfaction globale des assurés nationaux.
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+              <div class="card accent-card">
+                <div class="large-stat">45 Millions</div>
+                <div style="font-weight: 700; font-size: 13px; margin-bottom: 2px;">Bénéficiaires de l'AMO</div>
+                <p class="card-desc">
+                  La généralisation historique de la Couverture Médicale Obligatoire au Royaume du Maroc exige le déploiement d'une infrastructure informatique performante et résiliente, capable d'absorber d'immenses volumes de transactions quotidiennes tout en assurant l'anonymat cryptographique complet des patients.
+                </p>
+              </div>
+              <div class="card" style="background: rgba(239, 68, 68, 0.02); border-color: rgba(239, 68, 68, 0.08);">
+                <div class="large-stat" style="background: linear-gradient(to right, #ef4444, #f87171); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Milliards DH</div>
+                <div style="font-weight: 700; font-size: 13px; margin-bottom: 2px; color: #f87171;">Perte Économique Annuelle Estimée</div>
+                <p class="card-desc">
+                  Les fraudes documentaires, la double délivrance abusive de médicaments onéreux et les feuilles de soins falsifiées représentent un manque à gagner colossal pour les finances publiques de la santé au Maroc. Le passage à un système d'ancrage décentralisé et immuable constitue une réponse technologique directe pour éliminer ces fuites à la source.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 4px;">
+          📌 <strong>Défi Métier :</strong> Comment offrir une interopérabilité instantanée tout en assurant une conformité éthique et réglementaire à 100% vis-à-vis de la CNDP ?
+        </div>
+      </div>
+
+      <!-- SLIDE 3: OBJECTIFS SPECIFIQUES SMART -->
+      <div class="slide" id="slide-3" data-notes="Pour orienter de manière scientifique nos développements, nous avons converti ces problématiques en 3 objectifs SMART majeurs. Le premier objectif est d'atteindre un taux de fraude documentaire de 0 % en bloquant cryptographiquement toute double délivrance de médicaments on-chain. Le deuxième objectif vise à réduire de 90 % le temps administratif de traitement des demandes de remboursement. Grâce aux smart contracts d'assurance, nous passons de 30 jours à quelques minutes d'attente. Enfin, le patient redevient souverain de ses données à 100 %, lui conférant le contrôle exclusif des droits de lecture à ses informations médicales via une signature de portefeuille Web3.">
+        <div class="slide-header">
+          <div class="slide-category">Alignement Stratégique</div>
+          <h2 class="slide-title">Objectifs SMART & Indicateurs de Réussite</h2>
+          <span class="slide-index-indicator">Slide 3 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-grid-3">
+            <div class="card">
+              <div class="large-stat">0%</div>
+              <div class="card-title">Fraude aux Actes Médicaux</div>
+              <p class="card-desc">
+                Élimination absolue par conception de la <strong>double-délivrance</strong>. Une ordonnance ancrée et consommée ne peut cryptographiquement plus être réutilisée, interdisant toute réclame frauduleuse ultérieure.
+                <br><br>
+                <strong>Vérification Cryptographique :</strong> Le contrat intelligent Rust ink! applique une transition d'état stricte de <span class="code-term">PRESCRIBED</span> à <span class="code-term">DELIVERED</span>. Tout double appel de délivrance échoue instantanément au niveau du consensus de la blockchain.
+                <br><br>
+                <strong>Impact national :</strong> Cette barrière logicielle protège directement les budgets de la CNSS et de la CNOPS contre les pharmacies malveillantes ou les patients tentant d'obtenir plusieurs fois le même traitement sur une seule ordonnance.
+              </p>
+            </div>
+            <div class="card">
+              <div class="large-stat">-90%</div>
+              <div class="card-title">Délais d'Instruction Administrative</div>
+              <p class="card-desc">
+                Automatisation complète du calcul de couverture d'assurance par Smart Contract. Les officines et patients reçoivent l'approbation de remboursement en **quelques minutes** au lieu de 30 jours.
+                <br><br>
+                <strong>Tiers-Payant Instantané :</strong> L'exécution déterministe on-chain valide l'adéquation entre l'ordonnance prescrite et les médicaments effectivement délivrés, et calcule immédiatement la quote-part due par la caisse d'assurance.
+                <br><br>
+                <strong>Avantage Opérationnel :</strong> Les professionnels de santé voient leur trésorerie soulagée par la disparition des factures en attente et des litiges manuels de remboursement.
+              </p>
+            </div>
+            <div class="card accent-card">
+              <div class="large-stat">100%</div>
+              <div class="card-title" style="color: var(--accent);">Souveraineté des Consentements</div>
+              <p class="card-desc">
+                Le patient accorde un accès temporaire et révocable à ses données cliniques chiffrées via signature Web3. Aucun médecin ne peut lire le dossier sans ce consentement enregistré on-chain.
+                <br><br>
+                <strong>Gestion d'Accès Fine (ACL) :</strong> La blockchain enregistre de manière immuable l'historique des accès accordés par le patient aux différents praticiens. Les droits peuvent être révoqués à tout moment par signature.
+                <br><br>
+                <strong>Conformité Loi 09-08 (CNDP) :</strong> Le stockage cryptographique décentralisé garantit que la divulgation non consentie d'informations médicales est impossible, protégeant la vie privée des citoyens marocains.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div style="background: rgba(16, 185, 129, 0.04); padding: 8px 12px; border-radius: 8px; font-size: 11px; border: 1px solid rgba(16, 185, 129, 0.15); width: 100%;">
+          🎯 <strong>Métrique clé de succès :</strong> Réduire le coût administratif global de gestion des dossiers de soins de plus de **85 %** au niveau national d'ici 18 mois après le déploiement.
+        </div>
+      </div>
+
+      <!-- SLIDE 4: ARCHITECTURE RUNTIME DU REPOSITORY -->
+      <div class="slide" id="slide-4" data-notes="Pour concrétiser ces ambitions, la structure de production de notre repository met en œuvre une architecture de e-santé hybride et moderne. La pièce maîtresse est notre interface Next.js qui fait office d'orchestrateur. Elle gère localement le portefeuille du praticien, le trousseau de clés, et le chiffrement fort des métadonnées de soins. Le stockage décentralisé off-chain s'appuie sur le réseau IPFS pour héberger les enveloppes chiffrées. Enfin, la blockchain Substrate reçoit les hashs SHA-256 d'intégrité et gère le registre des droits de lecture via le smart contract ink! en Rust.">
+        <div class="slide-header">
+          <div class="slide-category">Spécifications Techniques</div>
+          <h2 class="slide-title">Architecture Technologique Globale & Hybride</h2>
+          <span class="slide-index-indicator">Slide 4 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split-uneven">
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+              <div class="card">
+                <div class="card-title" style="color: var(--primary);">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                  Next.js Client-Side Orchestrator
+                </div>
+                <p class="card-desc">
+                  Le frontend Next.js orchestre en direct les flux sans tiers centralisé classique :
+                  <br>• Gestion des portefeuilles Web3 via l'extension Polkadot.js.
+                  <br>• Chiffrement symétrique local fort <strong>AES-GCM-256</strong> dans le navigateur.
+                  <br>• Calcul de hachage déterministe canonique **SHA-256** du payload JSON.
+                  <br>• Appels directs de Smart Contract via la passerelle <span class="code-term">chainContract.ts</span>.
+                  <br><br>
+                  L'interface client assure la génération des clés éphémères de chiffrement et s'occupe de chiffrer les diagnostics médicaux avant tout transfert sur le réseau public, garantissant un secret médical absolu.
+                </p>
+              </div>
+              <div class="card">
+                <div class="card-title" style="color: var(--secondary);">
+                  <svg class="icon secondary-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                  API Facade Locale Next.js
+                </div>
+                <p class="card-desc">
+                  Intégrée dans <span class="code-term">frontend/src/lib/api.ts</span> pour gérer la persistance locale d'identité et de secours IPFS (<span class="code-term">ipfsClient.ts</span>). Permet la résolution rapide des rôles et l'accès transparent aux données off-chain.
+                  <br><br>
+                  Cette facade expose des endpoints sécurisés permettant aux professionnels de santé de s'authentifier par signature cryptographique et de charger les dossiers médicaux déchiffrés localement dans leur interface.
+                </p>
+              </div>
+            </div>
+            
+            <div class="card accent-card">
+              <div class="card-title" style="color: var(--accent);">Couplage On-Chain / Off-Chain (Data Separation)</div>
+              <div style="font-size: 11.5px; line-height: 1.5; color: var(--text-muted);">
+                <strong style="color: #fff;">1. Registre On-Chain (Substrate / ink! Contract) :</strong>
+                <br>• Stocke uniquement les identifiants d'actes uniques et les hashs d'intégrité SHA-256.
+                <br>• Enregistre les CIDs IPFS faisant office de pointeurs de stockage.
+                <br>• Gère la liste blanche des professionnels de santé agréés et le statut des ordonnances.
+                <br>• Exécute l'ACL on-chain pour accorder ou révoquer les accès.
+                <br><br>
+                L'utilisation de la blockchain garantit que le registre de traçabilité ne peut être altéré, tandis que le smart contract assure la validation des droits d'accès en temps réel avant d'exposer les pointeurs IPFS.
+                
+                <br><br><strong style="color: #fff;">2. Stockage Off-Chain (IPFS / Pinata Sovereign Cloud) :</strong>
+                <br>• Stocke les enveloppes chiffrées contenant le détail clinique.
+                <br>• Sauvegarde les documents originaux (fichiers Base64/PDF).
+                <br>• Base de données MongoDB locale pour le cache à haute disponibilité.
+                <br><br>
+                IPFS assure une distribution résiliente et décentralisée des fichiers chiffrés, garantissant qu'aucune entité centrale ne contrôle le stockage physique des dossiers médicaux.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 4px;">
+          📌 <strong>Sécurité renforcée :</strong> La déconnexion logique et cryptographique entre l'identité on-chain et le dossier de santé off-chain prévient toute analyse de données malveillante.
+        </div>
+      </div>
+
+      <!-- SLIDE 5: SPECIFICATIONS TECHNIQUES ON-CHAIN (INK!) -->
+      <div class="slide" id="slide-5" data-notes="Entrons dans les détails des spécifications on-chain. Notre contrat intelligent ink! écrit en Rust gère l'intégrité de bout en bout. Nous utilisons la structure de données Anchor qui contient l'identifiant unique logique, le hash SHA-256 de validation, le CID IPFS pointant vers le document chiffré, les adresses de portefeuilles du patient, du médecin et de la pharmacie, ainsi que les autorisations de lecture dynamique et le statut. Les mutations clés sont store_anchor, mark_delivered, cancel_record, et la gestion dynamique des accès via grant_access et revoke_access.">
+        <div class="slide-header">
+          <div class="slide-category">Spécifications Techniques</div>
+          <h2 class="slide-title">Spécifications des Modèles de Données On-Chain (ink!)</h2>
+          <span class="slide-index-indicator">Slide 5 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="card" style="flex: 1.1;">
+              <div class="card-title" style="color: var(--primary);">Le Contrat de Donnée de l'Ancre (Anchor Model)</div>
+              <p class="card-desc">
+                Défini dans le smart contract ink! en Rust (<span class="code-term">smart-contracts/ink-medical-anchors/lib.rs</span>) :
+              </p>
+              <div class="code-block" style="flex: 1;">
+                pub struct Anchor {
+                <br>&nbsp;&nbsp;record_id: String,
+                <br>&nbsp;&nbsp;hash: [u8; 32], // Hash cryptographique SHA-256 du document original
+                <br>&nbsp;&nbsp;cid: String, // Adresse de contenu IPFS unique (CIDv1)
+                <br>&nbsp;&nbsp;owner_wallet: AccountId, // Adresse publique du Patient (propriétaire)
+                <br>&nbsp;&nbsp;doctor_wallet: AccountId, // Adresse publique du médecin émetteur
+                <br>&nbsp;&nbsp;pharmacy_wallet: Option&lt;AccountId&gt;, // Officine dédiée désignée
+                <br>&nbsp;&nbsp;authorized_wallets: Vec&lt;AccountId&gt;, // ACL d'accès dynamique
+                <br>&nbsp;&nbsp;status: RecordStatus, // PRESCRIBED | DELIVERED | CANCELLED
+                <br>&nbsp;&nbsp;created_at: u64, // Timestamp d'ancrage blockchain
+                <br>&nbsp;&nbsp;updated_at: u64, // Dernière modification de statut
+                <br>}
+              </div>
+            </div>
+            
+            <div class="card" style="flex: 0.9; justify-content: space-between;">
+              <div>
+                <div class="card-title" style="color: var(--secondary);">Interface Active de Mutation & de Requêtes (ink!)</div>
+                <p class="card-desc" style="font-size: 11.5px;">
+                  Les portefeuilles interagissent avec le registre via 5 transactions majeures :
+                </p>
+                <div class="detail-list" style="gap: 4px;">
+                  <div class="detail-item" style="padding: 6px 10px;">
+                    <div class="detail-bullet">1</div>
+                    <span class="detail-desc"><strong>store_anchor :</strong> Enregistrement initial cryptographique de l'acte médical par le médecin. Le contrat valide l'identité du médecin avant d'accepter l'écriture.</span>
+                  </div>
+                  <div class="detail-item" style="padding: 6px 10px;">
+                    <div class="detail-bullet">2</div>
+                    <span class="detail-desc"><strong>mark_delivered :</strong> Passage irréversible à l'état DELIVERED déclenché par l'officine de pharmacie agréée, libérant le calcul du remboursement.</span>
+                  </div>
+                  <div class="detail-item" style="padding: 6px 10px;">
+                    <div class="detail-bullet">3</div>
+                    <span class="detail-desc"><strong>cancel_record :</strong> Annulation définitive par l'émetteur ou le patient en cas d'erreur de diagnostic ou de changement de prescription.</span>
+                  </div>
+                </div>
+              </div>
+              <div style="font-size: 11px; background: rgba(0, 0, 0, 0.2); padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                💡 <strong>Compilation WASM :</strong> Les smart contracts ink! s'exécutent sur la machine virtuelle de Substrate, offrant une vitesse de calcul optimale et des frais de gas minimes pour un traitement massif au niveau national marocain.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: SPECIFICATIONS TECHNIQUES OFF-CHAIN (IPFS & ENVELOPE) -->
+      <div class="slide" id="slide-6" data-notes="Pour stocker les dossiers médicaux confidentiels, nous avons conçu un format off-chain robuste sur IPFS. Nous utilisons le schéma d'enveloppe 'msce-aes-256-gcm-v1'. Il comprend la version de l'enveloppe, le vecteur d'initialisation IV, le sel pour la dérivation de clé PBKDF2, le tag d'authentification GCM pour contrer toute manipulation, et le message chiffré ciphertext. De plus, la structure du payload d'événement médical 'msce-medical-event-v1' répertorie les données cliniques, le type de visite, et le montant associé à la demande de remboursement.">
+        <div class="slide-header">
+          <div class="slide-category">Spécifications Techniques</div>
+          <h2 class="slide-title">Spécifications Off-Chain : Schéma d'Enveloppe & IPFS Payloads</h2>
+          <span class="slide-index-indicator">Slide 6 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="card" style="flex: 1;">
+              <div class="card-title" style="color: var(--accent);">L'Enveloppe Cryptographique (msce-aes-256-gcm-v1)</div>
+              <p class="card-desc">
+                Payload JSON brut chiffré stocké sous l'adresse CID IPFS :
+              </p>
+              <div class="code-block" style="flex: 1;">
+                {
+                <br>&nbsp;&nbsp;"version": "msce-aes-256-gcm-v1",
+                <br>&nbsp;&nbsp;"iv": "e0a1d9c8e7b1a4d32c2f61f61d0f8a0f", // Vecteur d'initialisation (12 octets)
+                <br>&nbsp;&nbsp;"salt": "f9d2b2e41f6f0f1112b8f7f6f4f4f0a1", // Sel de dérivation PBKDF2
+                <br>&nbsp;&nbsp;"tag": "a1b2c3d4e5f607182930415263748596", // Tag d'authentification GCM
+                <br>&nbsp;&nbsp;"ciphertext": "T3BlbiBTYW50ZSBvbiBCbG9ja2NoYWluIG1hcm9j..." // Contenu chiffré Base64
+                <br>}
+              </div>
+              <p class="card-desc" style="font-size: 11px; margin-top: 4px;">
+                🔒 Le ciphertext ne peut être lu qu'avec la clé dérivée. Sans cette clé, le contenu reste mathématiquement indéchiffrable par l'hébergeur cloud ou le nœud IPFS qui stocke l'enveloppe.
+              </p>
+            </div>
+            
+            <div class="card" style="flex: 1;">
+              <div class="card-title" style="color: var(--primary);">Le Payload Clinique Déchiffré (msce-medical-event-v1)</div>
+              <p class="card-desc">
+                Format structuré de l'événement de santé après déchiffrement client :
+              </p>
+              <div class="code-block" style="flex: 1;">
+                {
+                <br>&nbsp;&nbsp;"eventDomain": "VISIT", // VISIT | LAB_RESULT | MEDICAL_ACT
+                <br>&nbsp;&nbsp;"eventType": "GeneralConsultation",
+                <br>&nbsp;&nbsp;"patientWallet": "0xPATIENT_ACCOUNT_ID",
+                <br>&nbsp;&nbsp;"actorWallet": "0xDOCTOR_ACCOUNT_ID",
+                <br>&nbsp;&nbsp;"details": {
+                <br>&nbsp;&nbsp;&nbsp;&nbsp;"diagnosis": "Angine bactérienne aiguë",
+                <br>&nbsp;&nbsp;&nbsp;&nbsp;"notes": "Traitement par antibiotiques pendant 6 jours."
+                <br>&nbsp;&nbsp;},
+                <br>&nbsp;&nbsp;"amountClaim": 200.00, // Quote-part réclamable en DH
+                <br>&nbsp;&nbsp;"createdAt": 1776381800
+                <br>}
+              </div>
+              <p class="card-desc" style="font-size: 11px; margin-top: 4px;">
+                💡 Les données cliniques sont entièrement structurées sous forme d'objets JSON standardisés, permettant l'interopérabilité directe entre différents hôpitaux et les caisses d'assurance maladie au Maroc.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: ALGORITHMES CRYPTOGRAPHIQUES ET INTEGRITE -->
+      <div class="slide" id="slide-7" data-notes="Détaillons nos algorithmes de protection cryptographique. Tout le chiffrement s'effectue dans le navigateur web via l'API WebCrypto de FIDO/W3C. La clé d'accès médicale du patient est dérivée de son mot de passe ou code confidentiel au moyen de l'algorithme PBKDF2 sur SHA-256 avec 10 000 itérations et un sel cryptographique aléatoire de 128 bits. Les données de santé sont ensuite cryptées sous le mode AES-256-GCM. Pour l'intégrité, nous applions un formateur JSON canonique strict avant de calculer le hash SHA-256, garantissant qu'aucune anomalie de formattage n'altère le hash d'intégrité on-chain.">
+        <div class="slide-header">
+          <div class="slide-category">Sécurité Applicative</div>
+          <h2 class="slide-title">Algorithmes Cryptographiques & Preuves d'Intégrité</h2>
+          <span class="slide-index-indicator">Slide 7 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="card" style="border-left: 4px solid var(--accent); justify-content: space-between; flex: 1;">
+              <div>
+                <div class="card-title" style="color: var(--accent); font-family: 'Outfit', sans-serif;">Dérivation de Clé & Chiffrement Client</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.5; margin-bottom: 6px;">
+                  Exécuté localement dans <span class="code-term">medicalCrypto.ts</span> pour garantir la souveraineté des données :
+                  <br>• <strong>Dérivation :</strong> Algorithme <strong>PBKDF2</strong> sur <strong>SHA-256</strong> avec un sel de 16 octets (128 bits) et 10 000 itérations de boucle.
+                  <br>• <strong>Cipher :</strong> Mode <strong>AES-256-GCM</strong> (Galois/Counter Mode) fournissant le chiffrement et l'authentification forte contre les attaques par injection ou modification.
+                  <br>• <strong>Zéro Fuite :</strong> Les clés de chiffrement restent locales dans la mémoire éphémère de l'application cliente et ne sont jamais enregistrées en clair sur des disques distants.
+                </p>
+              </div>
+              <div class="code-block" style="font-size: 9.5px; color: #f59e0b; background: rgba(0, 0, 0, 0.45); height: 100px;">
+                // WebCrypto API derivation sample
+                <br>const keyMaterial = await window.crypto.subtle.importKey(
+                <br>&nbsp;&nbsp;"raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]
+                <br>);
+                <br>const key = await window.crypto.subtle.deriveKey(
+                <br>&nbsp;&nbsp;{ name: "PBKDF2", salt, iterations: 10000, hash: "SHA-256" },
+                <br>&nbsp;&nbsp;keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+                <br>);
+              </div>
+            </div>
+            
+            <div class="card" style="border-left: 4px solid var(--primary); justify-content: space-between; flex: 1;">
+              <div>
+                <div class="card-title" style="color: var(--primary); font-family: 'Outfit', sans-serif;">Algorithme de Vérification d'Intégrité (SHA-256)</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.5; margin-bottom: 6px;">
+                  Pour prouver l'authenticité d'un document récupéré sur IPFS :
+                  <br>1. Extraction de l'enveloppe JSON à partir de l'adresse CID.
+                  <br>2. Déchiffrement local du ciphertext avec la clé dérivée.
+                  <br>3. Passage du JSON déchiffré dans le formateur <strong>Canonique Déterministe</strong> (clés triées alphabétiquement, suppression d'espaces).
+                  <br>4. Calcul du hachage de l'empreinte logicielle via <strong>SHA-256</strong>.
+                  <br>5. Comparaison du hachage local obtenu avec la valeur ancrée on-chain.
+                  <br>• Cette méthode garantit qu'aucune altération des données cliniques n'a eu lieu pendant la transmission ou le stockage off-chain.
+                </p>
+              </div>
+              <div class="code-block" style="font-size: 9.5px; color: #10b981; background: rgba(0, 0, 0, 0.45); height: 100px;">
+                // Canonical JSON Hashing
+                <br>function canonicalize(obj) {
+                <br>&nbsp;&nbsp;return JSON.stringify(obj, Object.keys(obj).sort());
+                <br>}
+                <br>const rawHash = await window.crypto.subtle.digest(
+                <br>&nbsp;&nbsp;"SHA-256", new TextEncoder().encode(canonicalize(payload))
+                <br>);
+                <br>const hashHex = Array.from(new Uint8Array(rawHash)).map(b => b.toString(16).padStart(2, '0')).join('');
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: RESOLUTION D'IDENTITE ET DE ROLES -->
+      <div class="slide" id="slide-8" data-notes="Pour assurer une intégration fluide, nous avons conçu un système de résolution dynamique des rôles et des identités. Au login, le patient connecte son portefeuille. Le frontend interroge notre route locale d'API. Le résolveur de rôle vérifie d'abord si le portefeuille fait partie des portefeuilles administrateurs, puis interroge le cache en mémoire active d'une durée de vie de 2 minutes pour éviter les requêtes trop fréquentes vers le réseau. En l'absence de rôle ou d'historique, un rôle patient par défaut est attribué. Enfin, le module identity resolve extrait les données du profil de l'assuré ou du cabinet du praticien.">
+        <div class="slide-header">
+          <div class="slide-category">Mécanique Internes</div>
+          <h2 class="slide-title">Algorithmes de Résolution des Rôles & Identités</h2>
+          <span class="slide-index-indicator">Slide 8 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="detail-list" style="flex: 1.1;">
+              <div class="detail-item">
+                <div class="detail-bullet">1</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Algorithme de Résolution de Rôle (Priorités)</span>
+                  <span class="detail-desc">
+                    1. Vérification dans les variables globales d'environnement (<span class="code-term">NEXT_PUBLIC_ADMIN_WALLETS</span>).
+                    <br>2. Lecture du cache mémoire in-process (TTL de 2 minutes pour éviter la surcharge réseau).
+                    <br>3. Analyse des ancres de gouvernance active on-chain sous le préfixe <span class="code-term">mongo:walletroles:*</span>.
+                    <br>Cette hiérarchie stricte assure une résolution de rôle sécurisée et très performante même lors des pics de charge.
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">2</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Algorithme de Résolution d'Identité</span>
+                  <span class="detail-desc">
+                    Parcourt les ancres d'identité associées au portefeuille, trie du plus récent au plus ancien, fetch les documents IPFS, extrait et fusionne les champs requis (<span class="code-term">fullName</span>, <span class="code-term">cabinetName</span>, <span class="code-term">institutionName</span>). Ce mécanisme permet une synchronisation continue de l'identité du professionnel de santé avec les registres de l'État.
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">3</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Politique d'Accès aux Dashboards</span>
+                  <span class="detail-desc">
+                    La complétion du profil minimal (Nom, Prénom, Âge) est obligatoire au premier login. Si absent, le frontend bloque la navigation et redirige vers un formulaire de complétion obligatoire pour garantir que les claims d'assurance contiennent les métadonnées exigées par la CNSS et la CNOPS.
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card accent-card" style="flex: 0.9; justify-content: space-between; padding: 14px 18px;">
+              <div>
+                <div class="card-title" style="color: var(--accent);">Fallbacks en Cas de Latence IPFS</div>
+                <p class="card-desc" style="font-size: 11.5px; margin-top: 4px; line-height: 1.55;">
+                  Si les nœuds IPFS mettent du temps à répondre ou renvoient une erreur de passerelle, le résolveur de rôle met en œuvre une déduction comportementale.
+                  <br><br>
+                  Le système infère le rôle à partir des types de transactions signées historiquement ou à partir des structures d'ancres associées pour garantir que l'application reste utilisable même en mode dégradé.
+                  <br><br>
+                  Les requêtes cliniques sont alors mises en attente dans un cache local chiffré (<span class="code-term">localStorage</span>) et envoyées de manière asynchrone dès le retour de la connectivité réseau.
+                </p>
+              </div>
+              <div class="code-block" style="font-size: 9.5px; color: #f59e0b; background: rgba(0, 0, 0, 0.45); border-color: rgba(245, 158, 11, 0.1);">
+                // Fallback inference pseudocode
+                <br>if (ipfsTimeout && recordId.startsWith("presc:")) {
+                <br>&nbsp;&nbsp;return { role: "PATIENT", status: "DEGRADED" };
+                <br>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: WORKFLOW COMPLET DE PRESCRIPTION -->
+      <div class="slide" id="slide-9" data-notes="Étudions le workflow complet de prescription. Lors d'une visite clinique, le médecin saisit l'ordonnance sur son interface Next.js. Le système se connecte au référentiel d'État pour valider les codes de médicaments. Ensuite, le payload JSON contenant les médicaments et les doses est crypté localement via AES-GCM-256 avec la clé publique du patient. L'enveloppe cryptée est poussée sur IPFS, qui génère le CID de contenu. Le médecin signe ensuite la transaction avec son extension de portefeuille Web3 pour inscrire le hash du document sur la blockchain Substrate. Enfin, l'ordonnance s'affiche sous forme de QR Code lisible par le pharmacien.">
+        <div class="slide-header">
+          <div class="slide-category">Processus Métier Détaillé</div>
+          <h2 class="slide-title">Cinématique de la Prescription Médicale</h2>
+          <span class="slide-index-indicator">Slide 9 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex: 1; align-items: stretch;">
+            <div class="card" style="border-top: 4px solid var(--primary); padding: 12px 14px;">
+              <div style="font-weight: 800; font-size: 16px; color: var(--primary); margin-bottom: 2px;">Étape 1</div>
+              <div style="font-weight: 700; font-size: 12px; margin-bottom: 4px; color: #fff;">Saisie DMP / ANAM</div>
+              <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                Le médecin saisit les lignes d'ordonnance. Les médicaments et posologies sont validés en direct face au catalogue AMO marocain pour éliminer les prescriptions hors-nomenclature.
+                <br><br>
+                Le médecin choisit les molécules autorisées et définit les volumes prescrits dans l'interface Next.js.
+              </p>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--secondary); padding: 12px 14px;">
+              <div style="font-weight: 800; font-size: 16px; color: var(--secondary); margin-bottom: 2px;">Étape 2</div>
+              <div style="font-weight: 700; font-size: 12px; margin-bottom: 4px; color: #fff;">Chiffrement Local</div>
+              <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                Le frontend Next.js crypte le JSON clinique en <strong>AES-GCM-256</strong> et l'upload vers Pinata/IPFS pour obtenir le CID de contenu.
+                <br><br>
+                Le chiffrement côté client garantit que les serveurs intermédiaires et le registre public ne voient jamais le diagnostic médical en clair.
+              </p>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--secondary); padding: 12px 14px;">
+              <div style="font-weight: 800; font-size: 16px; color: var(--secondary); margin-bottom: 2px;">Étape 3</div>
+              <div style="font-weight: 700; font-size: 12px; margin-bottom: 4px; color: #fff;">Signature & Ancrage</div>
+              <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                Le médecin signe la transaction Web3 via l'extension de son portefeuille. Le CID et le hash de l'ordonnance sont ancrés dans le smart contract ink!.
+                <br><br>
+                L'ancre on-chain scelle la prescription de façon immuable, créant une preuve de validité infalsifiable de l'acte médical.
+              </p>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--accent); padding: 12px 14px;">
+              <div style="font-weight: 800; font-size: 16px; color: var(--accent); margin-bottom: 2px;">Étape 4</div>
+              <div style="font-weight: 700; font-size: 12px; margin-bottom: 4px; color: #fff;">Génération QR Code</div>
+              <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+                L'identifiant logique cryptographique de l'ancre et le lien IPFS sont encodés dans un QR code unique affiché sur le terminal du patient.
+                <br><br>
+                Le patient présente simplement ce QR code lors de sa visite en pharmacie pour déclencher le processus sécurisé de délivrance.
+              </p>
+            </div>
+          </div>
+          
+          <div class="card" style="background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.15); padding: 10px 14px; font-size: 11.5px;">
+            📝 <strong>Note d'Intégrité :</strong> L'ordonnance est scellée par la clé privée du médecin praticien. Toute modification physique des lignes d'ordonnance après signature invaliderait immédiatement l'ancrage blockchain.
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: CINEMATIQUE ET REGLAGE DE DELIVRANCE -->
+      <div class="slide" id="slide-10" data-notes="Voyons la cinématique de la délivrance en officine. Le patient se rend à la pharmacie et présente son QR code. Le pharmacien scanne le code, ce qui permet à l'interface de lire l'ancre on-chain et de récupérer le document chiffré sur IPFS. Si l'ordonnance n'a pas été assignée à un pharmacien spécifique au moment de la prescription, n'importe quelle officine agréée au Maroc peut procéder à la délivrance. Le pharmacien vérifie l'authenticité du document et clique sur valider. Son portefeuille envoie la transaction mark_delivered au contrat intelligent, modifiant l'état de l'ordonnance de manière atomique. Un reçu de délivrance contenant le montant total est stocké sur IPFS comme preuve pour l'assurance.">
+        <div class="slide-header">
+          <div class="slide-category">Processus Métier Détaillé</div>
+          <h2 class="slide-title">Cinématique de Délivrance en Officine & Règles d'Accès</h2>
+          <span class="slide-index-indicator">Slide 10 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="detail-list" style="flex: 1.15;">
+              <div class="detail-item">
+                <div class="detail-bullet">1</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Scan & Résolution de l'Ancre</span>
+                  <span class="detail-desc">La pharmacie scanne le QR code patient, lit les métadonnées de l'ancre sur la blockchain Substrate, et extrait l'enveloppe chiffrée sur IPFS. L'intégrité du document est validée par calcul de hash local. Ce processus s'exécute en moins de **3 secondes**, offrant un confort d'utilisation identique aux outils traditionnels mais avec une sécurité décuplée.</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">2</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Politique de Délivrance Ouverte (Open Policy)</span>
+                  <span class="detail-desc">
+                    Si le champ <span class="code-term">pharmacyWallet</span> est vide, <strong>toute pharmacie agréée</strong> au Maroc peut effectuer la délivrance en signant la transaction. Si un portefeuille d'officine est spécifiquement assigné lors de la prescription, seule cette adresse de portefeuille peut valider l'acte, garantissant la liberté de choix du patient ou le ciblage thérapeutique.
+                  </span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">3</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Mutation d'État & Reçu Monétaire</span>
+                  <span class="detail-desc">
+                    Lancement de la transaction <span class="code-term">mark_delivered</span>. En tâche de fond, création asynchrone d'un reçu d'officine sur IPFS sous l'identifiant <span class="code-term">receipt:recordId</span> contenant les montants facturés, qui servira de pièce justificative immuable pour le remboursement auprès des organismes assureurs.
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 0.85; justify-content: space-between;">
+              <div class="card accent-card">
+                <div class="card-title" style="color: var(--accent); font-family: 'Outfit', sans-serif;">Sécurité Anti-Double Consommation</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.55;">
+                  Dès la validation par la pharmacie, le statut de l'ordonnance passe de <strong>PRESCRIBED</strong> à <strong>DELIVERED</strong> de façon atomique et irréversible on-chain.
+                  <br><br>
+                  Toute tentative de scan ultérieur par une autre pharmacie affichera immédiatement une alerte d'infraction d'état : la transaction sera rejetée par le smart contract.
+                  <br><br>
+                  Ce blocage mécanique élimine toute possibilité de fraude par photocopie d'ordonnance ou falsification de dossier médical.
+                </p>
+              </div>
+              <div class="card">
+                <div class="card-title" style="color: var(--primary);">Le Smart Contract de Validation de Délivrance</div>
+                <div class="code-block" style="font-size: 9.5px; color: #10b981; background: rgba(0,0,0,0.45); border-color: rgba(16,185,129,0.1);">
+                  // mark_delivered ink! rust snippet
+                  <br>pub fn mark_delivered(&mut self, id: String) -> Result&lt;()&gt; {
+                  <br>&nbsp;&nbsp;let mut anchor = self.anchors.get(&id).ok_or(Error::NotFound)?;
+                  <br>&nbsp;&nbsp;if anchor.status != RecordStatus::Prescribed {
+                  <br>&nbsp;&nbsp;&nbsp;&nbsp;return Err(Error::InvalidTransition);
+                  <br>&nbsp;&nbsp;}
+                  <br>&nbsp;&nbsp;anchor.status = RecordStatus::Delivered;
+                  <br>&nbsp;&nbsp;self.anchors.insert(id, &anchor);
+                  <br>&nbsp;&nbsp;Ok(())
+                  <br>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 4px;">
+          🛡️ Intégrité du cycle de vie assurée on-chain.
+        </div>
+      </div>
+
+      <!-- SLIDE 11: WORKFLOW AUTOMATISE DES REMBOURSEMENTS (CLAIMS) -->
+      <div class="slide" id="slide-11" data-notes="Le module de remboursement automatique, ou claims, offre un immense gain financier et de temps. Après sa délivrance en pharmacie, le patient soumet sa demande de remboursement d'un clic depuis son mobile. Le système calcule la part de prise en charge d'assurance AMO et envoie le claim à l'organisme (CNSS, CNOPS) via le smart contract. Les assureurs reçoivent le claim dans leur tableau de bord. Au clic sur approuver, le calcul est certifié on-chain et l'ordre de virement électronique est émis automatiquement, réduisant de 30 jours à quelques minutes le traitement administratif.">
+        <div class="slide-header">
+          <div class="slide-category">Processus Métier Détaillé</div>
+          <h2 class="slide-title">Workflow Automatisé de Remboursement & Tiers-Payant</h2>
+          <span class="slide-index-indicator">Slide 11 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="detail-list" style="flex: 1.1;">
+              <div class="detail-item">
+                <div class="detail-bullet">A</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Déclenchement du Tiers-Payant</span>
+                  <span class="detail-desc">L'assuré sélectionne l'acte délivré ou l'événement clinique et clique sur « Réclamer ». Le montant est extrait de l'ancre de reçu d'officine ou de visite, évitant toute saisie manuelle erronée ou falsifiée.</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">B</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Calcul de la Couverture d'Assurance</span>
+                  <span class="detail-desc">Le smart contract d'assurance vérifie l'authenticité de la délivrance et le taux de remboursement réglementaire du profil avant d'autoriser la soumission. Les règles métiers garantissent un calcul exact de la quote-part.</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-bullet">C</div>
+                <div class="detail-text-box">
+                  <span class="detail-title">Validation Organisme & Paiement</span>
+                  <span class="detail-desc">L'assureur valide le claim depuis son dashboard. La transaction émet instantanément un ordre de paiement avec référence de virement bancaire, réduisant les coûts administratifs de traitement de plus de **85 %**.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 0.9; justify-content: space-between;">
+              <div class="card">
+                <div class="card-title" style="color: var(--primary);">Spécification du Claim Model (frontend)</div>
+                <p class="card-desc" style="font-size: 11px;">
+                  Chaque claim en cours est stocké localement et synchronisé avec la blockchain :
+                </p>
+                <div class="code-block" style="font-size: 9.5px; color: #a7f3d0; background: rgba(0,0,0,0.45); flex: 1;">
+                  {
+                  <br>&nbsp;&nbsp;"claimId": "claim:recordId",
+                  <br>&nbsp;&nbsp;"status": "PENDING", // PENDING | APPROVED | REIMBURSED
+                  <br>&nbsp;&nbsp;"patientWallet": "0xPATIENT_WALLET",
+                  <br>&nbsp;&nbsp;"amountRequested": 380.00, // En MAD
+                  <br>&nbsp;&nbsp;"amountApproved": 266.00, // Quote-part AMO (70%)
+                  <br>&nbsp;&nbsp;"paymentReference": "REF-MAD-2026-98a5fe8a"
+                  <br>}
+                </div>
+              </div>
+              <div class="card accent-card">
+                <div class="card-title" style="color: var(--accent);">Intégration du Taux de Couverture AMO</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.5;">
+                  Les smart contracts ink! intègrent les règles nationales marocaines pour le calcul de prise en charge (CNSS à 70%, CNOPS jusqu'à 90% sur les affections de longue durée ALD).
+                  <br><br>
+                  Le système effectue les vérifications d'éligibilité sans divulguer les détails intimes de la maladie de l'assuré aux auditeurs tiers.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 12: ROLE MATRIX ET ACL DÉTAILLÉ -->
+      <div class="slide" id="slide-12" data-notes="Pour assurer la sécurité réglementaire de la CNDP, la matrice d'accès cryptographique ACL est extrêmement stricte. Ce tableau montre les droits précis de chaque acteur. Le patient a les pleins accès de lecture à son dossier et d'écriture pour révoquer des accès. Le médecin peut uniquement lire sous réserve de consentement et dispose des droits de prescription. La pharmacie ne peut qu'écrire les statuts de délivrance. Les organismes d'assurances lisent les claims et écrivent les ordres de paiement, tandis que les administrateurs attribuent les agréments de rôles régionaux.">
+        <div class="slide-header">
+          <div class="slide-category">Sécurité & Permissions</div>
+          <h2 class="slide-title">La Matrice des Rôles & ACL Applicatives</h2>
+          <span class="slide-index-indicator">Slide 12 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 6px; border: 1px solid rgba(255,255,255,0.04); overflow-x: auto; flex: 1;">
+            <table class="table-data">
+              <thead>
+                <tr>
+                  <th>Rôle Applicatif</th>
+                  <th>Droits de Lecture (Read ACL)</th>
+                  <th>Droits d'Écriture (Write ACL)</th>
+                  <th>Source de Vérité d'Identité</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 700; color: #fff;">Patient / Citoyen</td>
+                  <td>Ses ordonnances chiffrées et antécédents personnels.</td>
+                  <td>Octroi/révocation d'accès, soumission de claims de remboursement.</td>
+                  <td>Portefeuille Web3 + profil minimal en local.</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700; color: var(--secondary);">Médecin / Cabinet</td>
+                  <td>Dossier du patient (uniquement si autorisé on-chain).</td>
+                  <td>Création d'ordonnances (PRESCRIBED), annulation d'actes cliniques.</td>
+                  <td>DID lié au registre des praticiens ANAM.</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700; color: var(--primary);">Apothecary / Pharmacie</td>
+                  <td>Contenu de la prescription scannée par QR Code.</td>
+                  <td>Passage de l'ordonnance à l'état DELIVERED on-chain.</td>
+                  <td>DID rattaché au Conseil National de l'Ordre.</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700; color: var(--accent);">Assureur (CNSS/CNOPS)</td>
+                  <td>Demandes de remboursement de sa file de couverture.</td>
+                  <td>Approbation/rejet de claims, émission d'ordre de virement.</td>
+                  <td>Clé institutionnelle configurée dans le smart contract.</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 700; color: #fff;">Administrateur Régional</td>
+                  <td>Attribution d'agréments et listes d'utilisateurs régionaux.</td>
+                  <td>Gestion des rôles de gouvernance (<span class="code-term">mongo:walletroles</span>).</td>
+                  <td>DID configuré dans <span class="code-term">NEXT_PUBLIC_ADMIN_WALLETS</span>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+            🔒 <strong>Politique de Sécurité CNDP :</strong> Les données de santé sensibles ne transitent jamais en clair. Toutes les lectures exigent le consentement cryptographique signé par le patient via son extension wallet. Les serveurs de base de données n'ont accès qu'aux enveloppes chiffrées, interdisant toute fuite massive d'informations cliniques sensibles en cas d'intrusion physique ou de cyberattaque.
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 13: GOUVERNANCE ET PROCESSUS DE TRAVAIL -->
+      <div class="slide" id="slide-13" data-notes="Notre processus de travail est structuré pour une livraison sécurisée et irréprochable. La maîtrise d'ouvrage (MOA) est sous le contrôle du Ministère de la Santé et de l'ANAM, qui définissent le cahier des charges et s'assurent de la conformité réglementaire. La maîtrise d'œuvre (MOE) regroupe notre consortium d'ingénieurs de 15 profils experts. Nous avons mis en place une organisation stricte, intégrant notamment deux développeurs Rust pour garantir un audit permanent du code des smart contracts, évitant tout bogue critique en production.">
+        <div class="slide-header">
+          <div class="slide-category">Gestion de Projet</div>
+          <h2 class="slide-title">Gouvernance, Processus de Travail & Équipe Projet</h2>
+          <span class="slide-index-indicator">Slide 13 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="card" style="border-left: 4px solid var(--primary); justify-content: flex-start; gap: 10px; flex: 1;">
+              <div class="card-title" style="color: var(--primary); font-family: 'Outfit', sans-serif;">Gouvernance Projet (MOA / MOE)</div>
+              <p class="card-desc" style="font-size: 12px; line-height: 1.6;">
+                • <strong>Maîtrise d'Ouvrage (MOA) :</strong> Portée par le Ministère de la Santé & l'ANAM. Elle valide la conformité réglementaire et l'intégration avec le registre d'État.
+                <br><br>
+                • <strong>Maîtrise d'Œuvre (MOE) :</strong> Consortium d'intégration technologique responsable de la compilation du smart contract Rust, du monitoring de l'infrastructure et de la haute disponibilité.
+                <br><br>
+                • <strong>Validation Réglementaire :</strong> Audit permanent de conformité à la CNDP pour la protection des données de santé personnelles, avec tests de non-régression de sécurité et analyses de vulnérabilités automatiques sur le code Rust et le frontend Next.js.
+              </p>
+            </div>
+            
+            <div class="card" style="border-left: 4px solid var(--secondary); justify-content: flex-start; gap: 10px; flex: 1;">
+              <div class="card-title" style="color: var(--secondary); font-family: 'Outfit', sans-serif;">Pôles de Compétences (15 Experts)</div>
+              <p class="card-desc" style="font-size: 11.5px; line-height: 1.55;">
+                • <strong>Pôle Direction :</strong> 1 PMO / Chef de Projet IT, 1 Product Owner Santé.
+                <br>• <strong>Pôle Blockchain Web3 :</strong> 1 Architecte Blockchain senior, 2 Développeurs Rust (ink!).
+                <br>• <strong>Pôle Frontend/UI :</strong> 3 Développeurs Full-Stack Next.js, 1 Développeur Mobile React Native, 1 UI/UX Designer.
+                <br>• <strong>Pôle SecOps & Qualité :</strong> 2 DevOps/SRE Kubernetes, 1 Expert Cybersécurité, 1 QA Testeur, 1 Rédacteur Technique.
+              </p>
+              <div style="background: rgba(59, 130, 246, 0.05); padding: 8px; border-radius: 8px; font-size: 11px; border: 1px solid rgba(59, 130, 246, 0.15); margin-top: 4px;">
+                💡 Les 2 Développeurs Rust permettent une revue de code croisée obligatoire pour chaque smart contract, assurant l'absence de failles sur la gestion monétaire et la transition d'état.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 14: PLAN DE DEPLOIEMENT & RUNBOOK EXPLOITATION -->
+      <div class="slide" id="slide-14" data-notes="Pour le déploiement technique, nous suivons un runbook d'exploitation rigoureux. Nous initialisons le nœud de consensus Substrate en mode persistant en configurant un répertoire local pour éviter de perdre les données cliniques. Ensuite, nous lançons le script de déploiement automatique deploy-contract.sh qui compile le contrat, l'instancie on-chain avec un sel unique, et met à jour automatiquement l'adresse de contrat dans le fichier d'environnement .env.local du frontend.">
+        <div class="slide-header">
+          <div class="slide-category">Exploitation Technique</div>
+          <h2 class="slide-title">Plan de Déploiement & Runbook d'Exploitation Réel</h2>
+          <span class="slide-index-indicator">Slide 14 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split">
+            <div class="card" style="justify-content: space-between; flex: 1;">
+              <div>
+                <div class="card-title" style="color: var(--secondary);">1. Initialisation de la Blockchain Persistante</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.45; margin-bottom: 6px;">
+                  Pour éviter la perte des prescriptions lors des redémarrages de nœuds, nous déployons un stockage persistant :
+                </p>
+              </div>
+              <div class="code-block" style="font-size: 10px; color: #a7f3d0; background: rgba(0,0,0,0.4); flex: 1;">
+                # Créer le répertoire de stockage local
+                <br>mkdir -p ./blockchain-data
+                <br># Démarrer le nœud Substrate de production
+                <br>substrate-contracts-node --dev -d ./blockchain-data
+              </div>
+              <p class="card-desc" style="font-size: 10.5px; color: var(--accent); margin-top: 4px;">
+                ⚠️ Ne pas utiliser le flag d'exploitation temporaire --tmp sous peine d'effacer tous les dossiers médicaux lors du redémarrage du serveur !
+              </p>
+            </div>
+            
+            <div class="card" style="justify-content: space-between; flex: 1;">
+              <div>
+                <div class="card-title" style="color: var(--primary);">2. Automatisation du Déploiement Contrat</div>
+                <p class="card-desc" style="font-size: 11.5px; line-height: 1.45; margin-bottom: 8px;">
+                  Exécution du script d'intégration continue <span class="code-term">./deploy-contract.sh</span> :
+                </p>
+              </div>
+              <div class="code-block" style="font-size: 10px; color: #93c5fd; background: rgba(0,0,0,0.4); flex: 1;">
+                # Build et compile le contrat en Rust (WASM)
+                <br>cargo contract build --release
+                <br># Instancie le contrat avec un sel d'unicité hexadécimal
+                <br>cargo contract instantiate --salt 0x0123...
+              </div>
+              <p class="card-desc" style="font-size: 11px; margin-top: 4px;">
+                🚀 Le script met à jour automatiquement la clé <span class="code-term">NEXT_PUBLIC_CONTRACT_ADDRESS</span> dans <span class="code-term">.env.local</span> et copie la metadata JSON vers le frontend public pour assurer l'intégration continue.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 15: SLA & MAINTENANCE EVOLUTIVE -->
+      <div class="slide" id="slide-15" data-notes="Pour clore les aspects exploitation, nous définissons des SLAs très rigoureux. La maintenance corrective de niveau 1 assure une assistance 24h sur 24 en cas de perte de clé privée par un praticien ou un patient. Pour les évolutions de smart contracts, l'immuabilité de la blockchain nous impose d'utiliser un patron de Proxy. Toute mise à niveau fonctionnelle exige un vote électronique de la majorité (3 sur 5) des nœuds institutionnels validateurs de l'État, suivi d'une période de blocage sécuritaire ou timelock de 48 heures pour permettre aux auditeurs indépendants d'analyser le code.">
+        <div class="slide-header">
+          <div class="slide-category">Exploitation Technique</div>
+          <h2 class="slide-title">Accord de Niveau de Service (SLA) & Maintenance Évolutive</h2>
+          <span class="slide-index-indicator">Slide 15 / 15</span>
+        </div>
+        <div class="slide-content">
+          <div class="layout-split-uneven">
+            <div class="card" style="padding: 10px; flex: 1.2;">
+              <table class="table-data">
+                <thead>
+                  <tr>
+                    <th>Niveau SLA</th>
+                    <th>Horaires</th>
+                    <th>Temps de Rétablissement (GTR)</th>
+                    <th>Périmètre de Maintenance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight: 700; color: #fff;">Niveau 1</td>
+                    <td>24/7</td>
+                    <td>&lt; 30 minutes</td>
+                    <td>Assistance usagers (FAQ, perte de clés privées, aide à la signature).</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 700; color: var(--secondary);">Niveau 2</td>
+                    <td>Lun-Ven (8h-20h)</td>
+                    <td>&lt; 2 heures</td>
+                    <td>Correctifs d'API, relance de serveurs de cache, incident sur le cluster IPFS local.</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 700; color: var(--accent);">Niveau 3</td>
+                    <td>Lun-Ven (8h-20h)</td>
+                    <td>&lt; 4 heures</td>
+                    <td>Correction de vulnérabilités sur les smart contracts Rust, gouvernance de mise à jour.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="card accent-card" style="justify-content: flex-start; gap: 10px; padding: 12px; flex: 0.8;">
+              <div class="card-title" style="color: var(--accent); font-family: 'Outfit', sans-serif;">Gouvernance Évolutive & Proxy</div>
+              <p class="card-desc" style="font-size: 11.5px; line-height: 1.55;">
+                • <strong>Pattern Proxy :</strong> Les requêtes client pointent sur une adresse proxy unique, déléguant l'exécution au contrat actif.
+                <br><br>
+                • <strong>Vote Électronique :</strong> L'approbation à la majorité simple (3/5) des validateurs d'État est requise pour modifier l'adresse de logique cible.
+                <br><br>
+                • <strong>Timelock de 48 heures :</strong> Période d'attente obligatoire après vote pour laisser le temps aux auditeurs de valider la release.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Controls UI -->
+    <div class="controls-container">
+      <button class="btn-nav" onclick="prevSlide()">
+        <svg class="icon" style="stroke: currentColor;" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+
+      <span class="slide-counter" id="slideCounter">Slide 1 / 15</span>
+
+      <button class="btn-nav" onclick="nextSlide()">
+        <svg class="icon" style="stroke: currentColor;" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Speaker Notes Modal Panel -->
+  <div class="notes-panel" id="notesPanel">
+    <div class="notes-header">
+      <span class="notes-title">🗣️ Notes de l'orateur (Script de soutenance)</span>
+      <span class="notes-close" onclick="toggleNotes()">[ Fermer ]</span>
+    </div>
+    <div class="notes-content" id="notesContent">
+      Bonjour chers membres du jury. Nous vous présentons aujourd'hui notre projet de fin d'études intitulé 'Ma Santé en Chaîne'. Face à la numérisation croissante de notre société et à la nécessaire réforme de la couverture médicale obligatoire au Maroc (AMO), nous avons conçu et planifié une infrastructure décentralisée et hybride. Cette présentation met en avant notre cadrage méthodologique de gestion de projet, l'analyse de nos ambitions technologiques, et l'impact économique et financier attendu.
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 15;
+    
+    // Smooth ambient mouse moving glow effects
+    document.addEventListener('mousemove', (e) => {
+      const x = e.clientX / window.innerWidth;
+      const y = e.clientY / window.innerHeight;
+      
+      document.getElementById('orb1').style.transform = `translate(${x * 60}px, ${y * 60}px)`;
+      document.getElementById('orb2').style.transform = `translate(${-x * 60}px, ${-y * 60}px)`;
+    });
+
+    function showSlide(index) {
+      if (index < 1 || index > totalSlides) return;
+      
+      // Toggle CSS transition classes
+      const activeSlide = document.querySelector('.slide.active');
+      if (activeSlide) {
+        activeSlide.classList.remove('active');
+      }
+      
+      const newSlide = document.getElementById(`slide-${index}`);
+      newSlide.classList.add('active');
+      
+      currentSlide = index;
+      
+      // Update interactive counters and progress
+      document.getElementById('slideCounter').innerText = `Slide ${currentSlide} / ${totalSlides}`;
+      const progressPercent = ((currentSlide - 1) / (totalSlides - 1)) * 100;
+      document.getElementById('progressFill').style.width = `${progressPercent}%`;
+      
+      // Dynamic update of Speaker Notes script
+      const notes = newSlide.getAttribute('data-notes');
+      document.getElementById('notesContent').innerHTML = notes;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        showSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        showSlide(currentSlide - 1);
+      }
+    }
+
+    function toggleNotes() {
+      const panel = document.getElementById('notesPanel');
+      panel.classList.toggle('open');
+    }
+
+    // Keyboard support for oral presentation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'n' || e.key === 'N') {
+        toggleNotes();
+      }
+    });
+
+    // Trigger initial slide activation
+    showSlide(1);
+  </script>
+</body>
+</html>

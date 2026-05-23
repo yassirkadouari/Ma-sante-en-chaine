@@ -1,0 +1,18 @@
+\babel@toc {french}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Diagramme global des cas d'utilisation de la plateforme}}{17}{figure.caption.11}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Diagramme de Séquence : Émission et Ancrage d'une Ordonnance}}{18}{figure.caption.12}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Diagramme de Séquence : Pipeline de Vérification et Délivrance par la Pharmacie}}{19}{figure.caption.13}%
+\contentsline {figure}{\numberline {2.4}{\ignorespaces Diagramme de Séquence : Pipeline de Soumission, Audit et Remboursement}}{21}{figure.caption.14}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Tableau de bord Médecin : Interface de Prescription Décentralisée}}{31}{figure.caption.22}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Tableau de bord Pharmacie : Vue d'ensemble des ordonnances}}{32}{figure.caption.23}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Pharmacie : Scan du QR Code de l'ordonnance}}{32}{figure.caption.24}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Pharmacie : Résultat du scan et vérification d'intégrité blockchain}}{33}{figure.caption.25}%
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Tableau de bord Patient : Historique médical et gestion des accès}}{34}{figure.caption.26}%
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Tableau de bord Assurance : Moteur d'audit et remboursement}}{35}{figure.caption.27}%
+\contentsline {figure}{\numberline {4.7}{\ignorespaces Tableau de bord Laboratoire : Soumission de résultats d'analyses}}{35}{figure.caption.28}%
+\contentsline {figure}{\numberline {4.8}{\ignorespaces Tableau de bord Hôpital : Gestion des actes médicaux}}{36}{figure.caption.29}%
+\contentsline {figure}{\numberline {4.9}{\ignorespaces Tableau de bord Administrateur : Gouvernance et attribution des rôles}}{36}{figure.caption.30}%

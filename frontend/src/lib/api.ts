@@ -98,7 +98,38 @@ type AdminListItem = {
   };
 };
 
-const transientProfiles = new Map<string, PatientProfile>();
+const PATIENT_PROFILE_STORAGE_KEY = "msce.patient.medical.profile.v1";
+
+function loadPatientProfileMap(): Record<string, PatientProfile> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(PATIENT_PROFILE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function loadPatientProfile(walletAddress: string): PatientProfile {
+  const wallet = normalizeWallet(walletAddress);
+  if (!wallet) return {};
+  return loadPatientProfileMap()[wallet] || {};
+}
+
+function savePatientProfile(walletAddress: string, profile: PatientProfile) {
+  const wallet = normalizeWallet(walletAddress);
+  if (!wallet) return;
+  if (typeof window === "undefined") return;
+  try {
+    const map = loadPatientProfileMap();
+    map[wallet] = profile;
+    localStorage.setItem(PATIENT_PROFILE_STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    // Ignore localStorage write failures.
+  }
+}
 
 function createNonce() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -217,9 +248,7 @@ async function enforceSignedRequest(method: string, path: string, body: unknown,
   const nonce = createNonce();
   const hash = await bodyDigest(body || {});
   const message = signedMessage(method, path, timestamp, nonce, hash);
-  // Bypassed dummy signature request to prevent Polkadot.js extension rate-limit blocks (UX improvement).
-  // Blockchain transactions will still securely prompt for signature via signAndSend.
-  // await signMessage(walletAddress, message);
+  await signMessage(walletAddress, message);
 
   return walletAddress;
 }
@@ -411,15 +440,19 @@ async function canAccessAnchor(anchor: AnchorItem, session: Session) {
   if (session.role === "PHARMACIE" && isPrescriptionAnchor(anchor)) return true;
 
   try {
-    return await canReadOnChain(anchor.recordId, session.walletAddress);
-  } catch {
-    return (
-      normalizeWallet(anchor.ownerWallet) === normalizeWallet(session.walletAddress) ||
-      normalizeWallet(anchor.doctorWallet) === normalizeWallet(session.walletAddress) ||
-      normalizeWallet(anchor.pharmacyWallet || "") === normalizeWallet(session.walletAddress) ||
-      normalizeWallet(anchor.insurerWallet || "") === normalizeWallet(session.walletAddress)
-    );
+    const blockchainAllowed = await canReadOnChain(anchor.recordId, session.walletAddress);
+    if (blockchainAllowed) return true;
+  } catch (err) {
+    // Fallback to local check
   }
+
+  const owner = normalizeWallet(anchor.ownerWallet).toLowerCase();
+  const doctor = normalizeWallet(anchor.doctorWallet).toLowerCase();
+  const pharmacy = normalizeWallet(anchor.pharmacyWallet || "").toLowerCase();
+  const insurer = normalizeWallet(anchor.insurerWallet || "").toLowerCase();
+  const current = normalizeWallet(session.walletAddress).toLowerCase();
+
+  return owner === current || doctor === current || pharmacy === current || insurer === current;
 }
 
 function mapPrescriptionSummary(anchor: AnchorItem) {
@@ -493,7 +526,11 @@ function isRateLimitError(error: unknown) {
   return (
     message.includes("rate limit") ||
     message.includes("too many requests") ||
-    message.includes("429")
+    message.includes("429") ||
+    message.includes("403") ||
+    message.includes("forbidden") ||
+    message.includes("blocked") ||
+    message.includes("plan usage limit")
   );
 }
 
@@ -651,11 +688,11 @@ async function buildClaims(session: Session, statusFilter: string) {
       updatedAt: toIsoTimestamp(Number(claim.updatedAt || 0)),
     };
 
-    if (session.role === "PATIENT" && normalizeWallet(mapped.claimantWallet) !== normalizeWallet(session.walletAddress)) {
+    if (session.role === "PATIENT" && normalizeWallet(mapped.claimantWallet).toLowerCase() !== normalizeWallet(session.walletAddress).toLowerCase()) {
       continue;
     }
 
-    if (session.role === "ASSURANCE" && normalizeWallet(mapped.insurerWallet) !== normalizeWallet(session.walletAddress)) {
+    if (session.role === "ASSURANCE" && normalizeWallet(mapped.insurerWallet).toLowerCase() !== normalizeWallet(session.walletAddress).toLowerCase()) {
       continue;
     }
 
@@ -828,28 +865,19 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       `ordonnance-${Date.now()}.json`
     );
 
-    let recordId: string;
-    try {
-      recordId = await storeAnchorOnChain({
-        recordKey: `presc:${crypto.randomUUID()}`,
-        kind: "PRESCRIPTION",
-        cid: uploaded.cid,
-        hashHex: hash,
-        ownerWallet: patientWallet,
-        doctorWallet: session.walletAddress,
-        // Keep pharmacy unassigned so any approved pharmacy can process pricing/delivery.
-        pharmacyWallet: null,
-        insurerWallet: normalizeWallet(body.insurerWallet) || null,
-      });
-    } catch (error) {
-      if (!isContractUnavailableError(error)) {
-        throw error;
-      }
-      recordId = pendingRecordId("presc");
-      console.warn("[MSC] Contract unavailable for prescription anchor; returning pending record id.");
-    }
+    const recordId = await storeAnchorOnChain({
+      recordKey: `presc:${crypto.randomUUID()}`,
+      kind: "PRESCRIPTION",
+      cid: uploaded.cid,
+      hashHex: hash,
+      ownerWallet: patientWallet,
+      doctorWallet: session.walletAddress,
+      // Keep pharmacy unassigned so any approved pharmacy can process pricing/delivery.
+      pharmacyWallet: null,
+      insurerWallet: normalizeWallet(body.insurerWallet) || null,
+    });
 
-    return { recordId, status: recordId.startsWith("pending:") ? "PENDING_CHAIN" : "PRESCRIBED" } as T;
+    return { recordId, status: "PRESCRIBED" } as T;
   }
 
   if (pathname.match(/^\/prescriptions\/[^/]+$/) && method === "GET") {
@@ -1034,8 +1062,8 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     }
 
     const isOwnerOrDoctor =
-      normalizeWallet(current.ownerWallet) === normalizeWallet(session.walletAddress) ||
-      normalizeWallet(current.doctorWallet) === normalizeWallet(session.walletAddress);
+      normalizeWallet(current.ownerWallet).toLowerCase() === normalizeWallet(session.walletAddress).toLowerCase() ||
+      normalizeWallet(current.doctorWallet).toLowerCase() === normalizeWallet(session.walletAddress).toLowerCase();
 
     if (!isOwnerOrDoctor) {
       throw new Error("Seul le patient ou le medecin emetteur peut annuler.");
@@ -1052,9 +1080,9 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     if (!patientWallet) throw new Error("wallet patient invalide");
 
     const allAnchors = await listAnchors();
-    const patientAnchors = allAnchors.filter((item) => normalizeWallet(item.ownerWallet) === normalizeWallet(patientWallet));
+    const patientAnchors = allAnchors.filter((item) => normalizeWallet(item.ownerWallet).toLowerCase() === normalizeWallet(patientWallet).toLowerCase());
 
-    if (session.role === "PATIENT" && normalizeWallet(session.walletAddress) !== normalizeWallet(patientWallet)) {
+    if (session.role === "PATIENT" && normalizeWallet(session.walletAddress).toLowerCase() !== normalizeWallet(patientWallet).toLowerCase()) {
       throw new Error("Acces refuse au dossier d'un autre patient.");
     }
 
@@ -1115,9 +1143,13 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
   if (pathname === "/medical-events/mine" && method === "GET") {
     if (!session) throw new Error("Session requise");
     const anchors = (await listAnchors()).filter(
-      (item) => normalizeWallet(item.ownerWallet) === normalizeWallet(session.walletAddress) && isEventAnchor(item)
+      (item) => normalizeWallet(item.ownerWallet).toLowerCase() === normalizeWallet(session.walletAddress).toLowerCase() && isEventAnchor(item)
     );
-    const profile = transientProfiles.get(session.walletAddress) || {};
+    const storedProfile = loadPatientProfile(session.walletAddress);
+    const profile: PatientProfile = {
+      ...storedProfile,
+      primaryDoctorWallet: storedProfile.primaryDoctorWallet || session.identity?.primaryDoctorWallet || null,
+    };
 
     const visits: Array<{
       eventId: string;
@@ -1249,12 +1281,12 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     if (!session) throw new Error("Session requise");
     const body = (options.body || {}) as { doctorWallet?: string; revoked?: boolean };
 
-    const current = transientProfiles.get(session.walletAddress) || {};
+    const current = loadPatientProfile(session.walletAddress);
     const updated: PatientProfile = body.revoked
       ? { ...current, primaryDoctorWallet: null }
       : { ...current, primaryDoctorWallet: normalizeWallet(body.doctorWallet) || null };
 
-    transientProfiles.set(session.walletAddress, updated);
+    savePatientProfile(session.walletAddress, updated);
 
     saveSession({
       ...session,
@@ -1285,7 +1317,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
 
     const recordId = pathname.split("/")[3];
     const sourceAnchor = await getAnchor(recordId);
-    if (!isPrescriptionAnchor(sourceAnchor) || normalizeWallet(sourceAnchor.ownerWallet) !== normalizeWallet(session.walletAddress)) {
+    if (!isPrescriptionAnchor(sourceAnchor) || normalizeWallet(sourceAnchor.ownerWallet).toLowerCase() !== normalizeWallet(session.walletAddress).toLowerCase()) {
       throw new Error("Acces refuse a cette ordonnance.");
     }
 
@@ -1329,7 +1361,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
     if (!isEventAnchor(anchor)) {
       throw new Error("Cette source n'est pas un evenement medical.");
     }
-    if (normalizeWallet(anchor.ownerWallet) !== normalizeWallet(session.walletAddress)) {
+    if (normalizeWallet(anchor.ownerWallet).toLowerCase() !== normalizeWallet(session.walletAddress).toLowerCase()) {
       throw new Error("Acces refuse a cet evenement.");
     }
 
@@ -1450,27 +1482,18 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       `medical-visit-${Date.now()}.json`
     );
 
-    let recordId: string;
-    try {
-      recordId = await storeAnchorOnChain({
-        recordKey: `event:${crypto.randomUUID()}`,
-        kind: "VISIT",
-        cid: uploaded.cid,
-        hashHex: hash,
-        ownerWallet: patientWallet,
-        doctorWallet: session.walletAddress,
-        insurerWallet: normalizeWallet(body.insurerWallet) || null,
-        pharmacyWallet: null,
-      });
-    } catch (error) {
-      if (!isContractUnavailableError(error)) {
-        throw error;
-      }
-      recordId = pendingRecordId("event");
-      console.warn("[MSC] Contract unavailable for visit anchor; returning pending event id.");
-    }
+    const recordId = await storeAnchorOnChain({
+      recordKey: `event:${crypto.randomUUID()}`,
+      kind: "VISIT",
+      cid: uploaded.cid,
+      hashHex: hash,
+      ownerWallet: patientWallet,
+      doctorWallet: session.walletAddress,
+      insurerWallet: normalizeWallet(body.insurerWallet) || null,
+      pharmacyWallet: null,
+    });
 
-    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
+    return { eventId: recordId } as T;
   }
 
   if (pathname === "/hopital/events" && method === "POST") {
@@ -1529,27 +1552,18 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       `medical-event-${normalizedEventType.toLowerCase()}-${Date.now()}.json`
     );
 
-    let recordId: string;
-    try {
-      recordId = await storeAnchorOnChain({
-        recordKey: `event:${crypto.randomUUID()}`,
-        kind: "OPERATION",
-        cid: uploaded.cid,
-        hashHex: hash,
-        ownerWallet: patientWallet,
-        doctorWallet: session.walletAddress,
-        insurerWallet: normalizeWallet(body.insurerWallet) || null,
-        pharmacyWallet: null,
-      });
-    } catch (error) {
-      if (!isContractUnavailableError(error)) {
-        throw error;
-      }
-      recordId = pendingRecordId("event");
-      console.warn("[MSC] Contract unavailable for hospital event anchor; returning pending event id.");
-    }
+    const recordId = await storeAnchorOnChain({
+      recordKey: `event:${crypto.randomUUID()}`,
+      kind: "OPERATION",
+      cid: uploaded.cid,
+      hashHex: hash,
+      ownerWallet: patientWallet,
+      doctorWallet: session.walletAddress,
+      insurerWallet: normalizeWallet(body.insurerWallet) || null,
+      pharmacyWallet: null,
+    });
 
-    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
+    return { eventId: recordId } as T;
   }
 
   if (pathname === "/labo/results" && method === "POST") {
@@ -1604,27 +1618,18 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
       `labo-result-${Date.now()}.json`
     );
 
-    let recordId: string;
-    try {
-      recordId = await storeAnchorOnChain({
-        recordKey: `event:${crypto.randomUUID()}`,
-        kind: "LAB_RESULT",
-        cid: uploaded.cid,
-        hashHex: hash,
-        ownerWallet: patientWallet,
-        doctorWallet: session.walletAddress,
-        insurerWallet: normalizeWallet(body.insurerWallet) || null,
-        pharmacyWallet: null,
-      });
-    } catch (error) {
-      if (!isContractUnavailableError(error)) {
-        throw error;
-      }
-      recordId = pendingRecordId("event");
-      console.warn("[MSC] Contract unavailable for lab result anchor; returning pending event id.");
-    }
+    const recordId = await storeAnchorOnChain({
+      recordKey: `event:${crypto.randomUUID()}`,
+      kind: "LAB_RESULT",
+      cid: uploaded.cid,
+      hashHex: hash,
+      ownerWallet: patientWallet,
+      doctorWallet: session.walletAddress,
+      insurerWallet: normalizeWallet(body.insurerWallet) || null,
+      pharmacyWallet: null,
+    });
 
-    return { eventId: recordId, pending: recordId.startsWith("pending:") } as T;
+    return { eventId: recordId } as T;
   }
 
   if (pathname === "/admin/users" && method === "GET") {
@@ -1671,7 +1676,7 @@ export async function apiRequest<T>(options: SignedRequestOptions): Promise<T> {
           roles: [role],
           identity: {
             role,
-            fullName: identity.fullName || (walletAddress === session.walletAddress ? "Local User" : "Utilisateur Wallet"),
+            fullName: identity.fullName || (walletAddress.toLowerCase() === session.walletAddress.toLowerCase() ? "Local User" : "Utilisateur Wallet"),
             nickname: "wallet-user",
             dateOfBirth: "1990-01-01",
             region,

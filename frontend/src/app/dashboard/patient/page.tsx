@@ -319,53 +319,6 @@ export default function PatientDashboard() {
     return raw;
   };
 
-  const readPdfBlobFromIpfsDocument = async (cid: string): Promise<{ blob: Blob; fileName: string } | null> => {
-    if (!cid) return null;
-
-    let documentPayload = await downloadJsonFromIpfs<unknown>(cid);
-    if (looksLikeEncryptedPayload(documentPayload)) {
-      documentPayload = await decryptMedicalPayload<Record<string, unknown>>(documentPayload);
-    }
-
-    if (!documentPayload || typeof documentPayload !== "object") {
-      return null;
-    }
-
-    const record = documentPayload as Record<string, unknown>;
-    const documentData = String(record.documentData || "").trim();
-    if (!documentData.startsWith("data:")) {
-      return null;
-    }
-
-    const blob = await fetch(documentData).then((result) => result.blob());
-    const rawName = String(record.fileName || "").trim();
-    const fileName = rawName || `document-${cid.slice(0, 12)}.pdf`;
-    return { blob, fileName };
-  };
-
-  const downloadPdf = async (pathOrUrl: string, sourceDocumentCid?: string) => {
-    const cid = cidFromValue(sourceDocumentCid) || cidFromValue(pathOrUrl);
-
-    try {
-      if (cid) {
-        const ipfsPdf = await readPdfBlobFromIpfsDocument(cid);
-        if (ipfsPdf) {
-          triggerDownload(ipfsPdf.blob, ipfsPdf.fileName);
-          return;
-        }
-      }
-
-      const isAbsolute = /^https?:\/\//i.test(pathOrUrl);
-      if (isAbsolute) {
-        window.open(pathOrUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-
-      throw new Error("Document IPFS introuvable ou non lisible.");
-    } catch (error: any) {
-      setStatus({ type: "error", msg: error?.message || "Impossible de telecharger le document." });
-    }
-  };
 
   const StatusBadge = ({ status }: { status: string }) => {
     const colors: Record<string, string> = {
@@ -426,13 +379,6 @@ export default function PatientDashboard() {
             </div>
           </div>
 
-          {loadError && (
-            <div className="absolute top-full left-0 right-0 mt-4 p-4 bg-red-950/40 border border-red-500/30 rounded-2xl flex items-center gap-4 z-20">
-              <AlertCircle className="text-red-500 shrink-0" size={24} />
-              <p className="text-red-400 text-xs font-bold">{loadError}</p>
-            </div>
-          )}
-
           <div className="bg-neutral-950/80 p-6 rounded-3xl border border-blue-500/20 min-w-[320px] shadow-inner mt-16 md:mt-0">
              <h3 className="text-[10px] text-neutral-400 font-black uppercase mb-4 flex items-center gap-2">
                <Stethoscope size={14} className="text-blue-500" /> Gestion Médecin Traitant
@@ -470,6 +416,16 @@ export default function PatientDashboard() {
           </div>
         </div>
       </div>
+
+      {loadError && (
+        <div className="p-6 bg-red-950/40 border border-red-500/30 rounded-2xl flex items-center gap-4">
+          <AlertCircle className="text-red-500 shrink-0" size={24} />
+          <div>
+            <h3 className="text-red-400 font-black uppercase text-sm mb-1 tracking-widest">Alerte Système</h3>
+            <p className="text-red-400 text-xs font-bold">{loadError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex gap-2 p-1.5 bg-neutral-900/50 rounded-2xl border border-neutral-800 w-fit mx-auto lg:mx-0">
@@ -668,11 +624,6 @@ export default function PatientDashboard() {
                                  <span className="text-white bg-neutral-900 px-3 py-1 rounded-lg border border-neutral-800">{res.data.amountClaim} DH</span>
                                </div>
                              )}
-                             {res.data.pdfPath && (
-                                <button onClick={() => downloadPdf(res.data.pdfPath || "", res.data.documentCid)} className="w-full py-3 bg-blue-600/10 border border-blue-500/30 text-blue-400 rounded-xl text-[10px] font-black hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2 uppercase tracking-tighter">
-                                   <Download size={14} /> Voir le Rapport Signé
-                                </button>
-                             )}
                           </div>
                         </div>
                       );
@@ -713,11 +664,6 @@ export default function PatientDashboard() {
                                  <span className="uppercase font-mono">Honoraires:</span>
                                  <span className="text-red-400 bg-neutral-900 px-3 py-1 rounded-lg border border-neutral-800">{op.data.amountClaim} DH</span>
                                </div>
-                             )}
-                             {op.data.pdfPath && (
-                                <button onClick={() => downloadPdf(op.data.pdfPath || "", op.data.documentCid)} className="w-full py-3 bg-red-600/10 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2 uppercase tracking-tighter">
-                                   <Download size={14} /> Dossier Hospitalisation PDF
-                                </button>
                              )}
                           </div>
                         </div>
@@ -997,14 +943,6 @@ export default function PatientDashboard() {
                          ? `${Number(selectedEventDetails.data.amountClaim || 0)} DH`
                          : "Gratuit"}
                      </span>
-                   </div>
-                 )}
-                 {selectedEventDetails.data.pdfPath && (
-                   <div className="pt-4 mt-4 border-t border-neutral-800">
-                     <p className="text-[11px] font-bold text-neutral-500 mb-2">Document Associé:</p>
-                     <button onClick={() => downloadPdf(selectedEventDetails.data.pdfPath, selectedEventDetails.data.documentCid)} className="w-full py-2.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-2">
-                       <FileText size={16} /> VOIR / TÉLÉCHARGER IPFS PDF
-                     </button>
                    </div>
                  )}
                </div>

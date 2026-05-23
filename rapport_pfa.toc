@@ -1,0 +1,57 @@
+\babel@toc {french}{}\relax 
+\contentsline {chapter}{Dédicace}{1}{chapter*.1}%
+\contentsline {chapter}{Remerciements}{2}{chapter*.2}%
+\contentsline {chapter}{Résumé}{3}{chapter*.3}%
+\contentsline {chapter}{Glossaire}{4}{chapter*.4}%
+\contentsline {chapter}{Introduction générale}{10}{chapter*.8}%
+\contentsline {chapter}{\numberline {1}Contexte Général du Projet}{11}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Introduction}{11}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Présentation du Projet}{11}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Organisme d'accueil}{11}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Problématique}{11}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}Objectifs du Projet}{12}{subsection.1.2.3}%
+\contentsline {section}{\numberline {1.3}Méthodologie de Conduite de Projet}{12}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Conclusion}{12}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Analyse et Conception}{14}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Introduction}{14}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Identification des Acteurs}{14}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Spécification des Besoins}{15}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Besoins Fonctionnels}{15}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Besoins Non Fonctionnels}{16}{subsection.2.3.2}%
+\contentsline {section}{\numberline {2.4}Conception du Projet}{16}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Diagramme de Cas d'Utilisation}{16}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Diagrammes de Séquence}{18}{subsection.2.4.2}%
+\contentsline {subsubsection}{Diagramme de Séquence : Émission d'une Ordonnance}{18}{subsection.2.4.2}%
+\contentsline {subsubsection}{Diagramme de Séquence : Vérification et Délivrance Pharmacie}{19}{Item.15}%
+\contentsline {subsubsection}{Diagramme de Séquence : Pipeline Assurance (Claims)}{21}{Item.23}%
+\contentsline {subsection}{\numberline {2.4.3}Modélisation des Données On-Chain (Smart Contract ink!)}{21}{subsection.2.4.3}%
+\contentsline {subsection}{\numberline {2.4.4}Machine à États}{22}{subsection.2.4.4}%
+\contentsline {section}{\numberline {2.5}Conclusion}{22}{section.2.5}%
+\contentsline {chapter}{\numberline {3}Technologies et Outils Utilisés}{23}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Introduction}{23}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Technologies}{24}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Technologies utilisées pour la couche Blockchain (Back-end décentralisé)}{24}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Technologies utilisées pour le stockage décentralisé}{25}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}Technologies utilisées pour le développement Frontend}{25}{subsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.2.4}Technologies utilisées pour la couche cryptographique}{26}{subsection.3.2.4}%
+\contentsline {section}{\numberline {3.3}Outils de Développement}{26}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Conclusion}{26}{section.3.4}%
+\contentsline {chapter}{\numberline {4}Réalisation et Fonctionnement Détaillé}{28}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Introduction}{28}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Architecture Technique Globale}{28}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Mécanique de Chiffrement Hybride (Zero-Knowledge)}{28}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Données On-Chain vs Off-Chain}{29}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Pipeline d'Authentification « Wallet-First »}{29}{section.4.5}%
+\contentsline {section}{\numberline {4.6}Présentation des Dashboards}{30}{section.4.6}%
+\contentsline {subsection}{\numberline {4.6.1}Accès à l'application}{30}{subsection.4.6.1}%
+\contentsline {subsection}{\numberline {4.6.2}Dashboard Médecin}{30}{subsection.4.6.2}%
+\contentsline {subsection}{\numberline {4.6.3}Dashboard Pharmacie}{31}{subsection.4.6.3}%
+\contentsline {subsection}{\numberline {4.6.4}Dashboard Patient}{33}{subsection.4.6.4}%
+\contentsline {subsection}{\numberline {4.6.5}Dashboard Assurance (Insure\_Node)}{34}{subsection.4.6.5}%
+\contentsline {subsection}{\numberline {4.6.6}Dashboard Laboratoire}{35}{subsection.4.6.6}%
+\contentsline {subsection}{\numberline {4.6.7}Dashboard Hôpital}{35}{subsection.4.6.7}%
+\contentsline {subsection}{\numberline {4.6.8}Dashboard Administrateur}{36}{subsection.4.6.8}%
+\contentsline {section}{\numberline {4.7}Défis Techniques Rencontrés et Solutions}{37}{section.4.7}%
+\contentsline {section}{\numberline {4.8}Conclusion}{37}{section.4.8}%
+\contentsline {chapter}{Conclusion Générale et Perspectives}{38}{chapter*.32}%
+\contentsline {chapter}{Références}{39}{chapter*.33}%

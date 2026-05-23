@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Hospital, Search, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Activity, Upload, UserSearch, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { Hospital, Search, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Activity, UserSearch } from "lucide-react";
 import { apiRequest } from "../../../lib/api";
-import { uploadJsonToIpfs } from "@/lib/ipfsClient";
-import { encryptMedicalPayloadOrPlain } from "@/lib/medicalCrypto";
 
 type PatientArchive = {
   walletAddress: string;
@@ -38,90 +36,36 @@ export default function HopitalDashboard() {
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
 
-  // PDF Upload State
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleRecordEvent = async () => {
     try {
       setBusy(true);
       setStatus(null);
-      
-      const file = fileInputRef.current?.files?.[0];
+
       if (!patientWallet) throw new Error("Le wallet du patient est obligatoire.");
+      if (!department) throw new Error("Le département est obligatoire.");
+      if (!details) throw new Error("Les détails de l'acte sont obligatoires.");
 
-      let documentCid: string | undefined;
-
-      if (file) {
-        
-        const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(f);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = error => reject(error);
-        });
-        
-        const pdfBase64 = await toBase64(file);
-        
-        const documentPayload = {
+      const response = await apiRequest<{ eventId: string }>({
+        method: "POST",
+        path: "/hopital/events",
+        signed: true,
+        body: {
           patientWallet,
           eventType,
           department,
           details,
           amountClaim: amountClaim ? Number(amountClaim) : 0,
-          documentData: pdfBase64,
-          fileName: file.name
-        };
-
-        const packaged = await encryptMedicalPayloadOrPlain(documentPayload, {
-          recipientWallets: [patientWallet],
-        });
-
-        if (!packaged.encrypted && packaged.missingRecipientWallets.length > 0) {
-          console.warn(
-            `[MSC] Missing recipient encryption key(s): ${packaged.missingRecipientWallets.join(", ")}. ` +
-            "Uploading plain JSON payload for hospital document."
-          );
         }
-
-        const uploaded = await uploadJsonToIpfs(packaged.payload, `hopital-event-${Date.now()}.json`);
-        documentCid = uploaded.cid;
-      }
-
-      const response = await apiRequest<{ eventId: string; pending?: boolean }>({
-        method: "POST",
-        path: "/hopital/events",
-        signed: true,
-        body: {
-        patientWallet,
-        eventType,
-        department,
-        details,
-        amountClaim: amountClaim ? Number(amountClaim) : 0,
-        documentCid: documentCid
-      }
       });
 
-      const pending = Boolean(response.pending || response.eventId.startsWith("pending:"));
-      const eventLabel = pending ? response.eventId : response.eventId.slice(0, 8);
+      setStatus({
+        type: "success",
+        msg: `Acte ${eventType} enregistré et scellé. ID: ${response.eventId.slice(0, 8)}`,
+      });
 
-      setStatus(
-        pending
-          ? {
-              type: "info",
-              msg:
-                `Acte ${eventType} enregistre (IPFS OK), ancrage blockchain en attente. ` +
-                `ID temporaire: ${eventLabel}`,
-            }
-          : {
-              type: "success",
-              msg: `Acte ${eventType} enregistre et scelle. ID: ${eventLabel}`,
-            }
-      );
-      
       setPatientWallet("");
       setDetails("");
       setAmountClaim("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error: any) {
       setStatus({ type: "error", msg: error.message });
     } finally {
@@ -134,8 +78,8 @@ export default function HopitalDashboard() {
     try {
       setBusy(true);
       setArchive(null);
-      const data = await apiRequest<PatientArchive>({ 
-        path: `/records/patient/${searchWallet}` 
+      const data = await apiRequest<PatientArchive>({
+        path: `/records/patient/${searchWallet}`
       });
       setArchive(data);
     } catch (error: any) {
@@ -170,7 +114,7 @@ export default function HopitalDashboard() {
         {/* Entry Form */}
         <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-800 shadow-xl space-y-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-3 uppercase tracking-tighter">
-            <ClipboardList className="text-blue-500" /> Enregistrement Acte & Scellage PDF
+            <ClipboardList className="text-blue-500" /> Enregistrement Acte Médical
           </h2>
 
           <div className="space-y-4">
@@ -178,10 +122,10 @@ export default function HopitalDashboard() {
               <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Identité Patient (Wallet)</label>
               <div className="relative">
                 <User className="absolute left-3 top-3.5 text-neutral-600" size={16} />
-                <input 
+                <input
                   value={patientWallet}
                   onChange={(e) => setPatientWallet(e.target.value)}
-                  placeholder="0x..."
+                  placeholder="5Gx..."
                   className="w-full bg-black border border-neutral-800 p-3.5 pl-10 rounded-xl text-xs text-white outline-none focus:border-blue-500/50 transition-all font-mono"
                 />
               </div>
@@ -189,57 +133,34 @@ export default function HopitalDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                  <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Type d'Acte</label>
-                  <select 
-                    value={eventType}
-                    onChange={(e) => setEventType(e.target.value as any)}
-                    className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-blue-500/50 transition-all font-black uppercase"
-                  >
-                    <option value="ADMISSION">ADMISSION</option>
-                    <option value="OPERATION">INTERVENTION / OPÉRATION</option>
-                    <option value="DISCHARGE">SORTIE / DÉCHARGE</option>
-                  </select>
+                 <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Type d&apos;Acte</label>
+                 <select
+                   value={eventType}
+                   onChange={(e) => setEventType(e.target.value as any)}
+                   className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-blue-500/50 transition-all font-black uppercase"
+                 >
+                   <option value="ADMISSION">ADMISSION</option>
+                   <option value="OPERATION">INTERVENTION / OPÉRATION</option>
+                   <option value="DISCHARGE">SORTIE / DÉCHARGE</option>
+                 </select>
                </div>
                <div>
-                  <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Département</label>
-                  <input 
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    placeholder="ex: Cardiologie, Réanimation..."
-                    className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-blue-500/50 transition-all font-black"
-                  />
+                 <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Département</label>
+                 <input
+                   value={department}
+                   onChange={(e) => setDepartment(e.target.value)}
+                   placeholder="ex: Cardiologie, Réanimation..."
+                   className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-blue-500/50 transition-all font-black"
+                 />
                </div>
             </div>
 
             <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Compte-rendu Hospitalier (PDF)</label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-800 rounded-2xl cursor-pointer bg-black/40 hover:bg-black/60 hover:border-blue-500/30 transition-all group">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-3 text-neutral-600 group-hover:text-blue-500 transition-colors" />
-                    <p className="text-xs text-neutral-500 tracking-tighter uppercase font-bold">Téléverser le rapport scellé</p>
-                  </div>
-                  <input type="file" ref={fileInputRef} accept="application/pdf" className="hidden" />
-                </label>
-              </div>
-            </div>
-
-              <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-2">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-blue-500" />
-                  <span className="text-[10px] text-blue-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
-                </div>
-                <p className="text-[10px] text-neutral-400 leading-relaxed">
-                  Le PDF est chiffré si la clé destinataire existe, sinon ancré en JSON IPFS pour éviter le blocage.
-                </p>
-              </div>
-
-            <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Détails de l'Acte</label>
-              <textarea 
+              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Détails de l&apos;Acte</label>
+              <textarea
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
-                placeholder=" Motif de l'intervention..."
+                placeholder="Motif de l'intervention..."
                 className="w-full h-24 bg-black border border-neutral-800 p-4 rounded-xl text-xs text-neutral-300 outline-none focus:border-blue-500/50 transition-all resize-none"
               />
             </div>
@@ -247,7 +168,7 @@ export default function HopitalDashboard() {
             <div>
               <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Facturation Honoraires (DH)</label>
               <div className="relative">
-                <input 
+                <input
                   value={amountClaim}
                   onChange={(e) => setAmountClaim(e.target.value)}
                   placeholder="0.00"
@@ -257,7 +178,7 @@ export default function HopitalDashboard() {
               </div>
             </div>
 
-            <button 
+            <button
               disabled={busy || !patientWallet || !department || !details}
               onClick={handleRecordEvent}
               className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 disabled:opacity-30 uppercase tracking-widest text-xs"
@@ -275,13 +196,13 @@ export default function HopitalDashboard() {
                 <UserSearch className="text-amber-500" /> Archives Médicales
               </h2>
               <div className="flex gap-2">
-                 <input 
+                 <input
                     value={searchWallet}
                     onChange={(e) => setSearchWallet(e.target.value)}
                     placeholder="Saisir wallet patient..."
                     className="flex-1 bg-black border border-neutral-800 p-3 rounded-xl text-xs text-white outline-none focus:border-amber-500/50 transition-all font-mono"
                  />
-                 <button 
+                 <button
                     onClick={fetchArchive}
                     disabled={busy || !searchWallet}
                     className="p-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-all disabled:opacity-30"
@@ -319,7 +240,7 @@ export default function HopitalDashboard() {
                  <Activity className="text-blue-500" size={16} /> Audit Blockchain
               </h3>
               <p className="text-[10px] text-neutral-400 leading-relaxed font-bold italic">
-                 "Tous les actes hospitaliers enregistrés ici bénéficient d'une preuve d'intégrité via blockchain. Cela garantit la traçabilité des interventions et facilite les procédures de remboursement."
+                 &quot;Tous les actes hospitaliers enregistrés ici bénéficient d&apos;une preuve d&apos;intégrité via blockchain. Cela garantit la traçabilité des interventions et facilite les procédures de remboursement.&quot;
               </p>
            </div>
         </div>

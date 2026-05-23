@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ShieldAlert, QrCode, Search, CheckCircle2, Package, Activity, Info, AlertTriangle, UserSearch } from "lucide-react";
+import { ShieldAlert, QrCode, Search, CheckCircle2, Package, Activity, Info, AlertTriangle, AlertCircle, UserSearch } from "lucide-react";
 import { apiRequest } from "../../../lib/api";
 import QrScanner from "qr-scanner";
 

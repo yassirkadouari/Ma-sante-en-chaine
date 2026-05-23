@@ -1,0 +1,1584 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.5.7)  7 MAY 2026 18:36
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**rapport_pfa.tex
+(./rapport_pfa.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-01-19>
+(/usr/share/texlive/texmf-dist/tex/latex/base/report.cls
+Document Class: report 2025/01/22 v1.4n Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/size12.clo
+File: size12.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count275
+\c@chapter=\count276
+\c@section=\count277
+\c@subsection=\count278
+\c@subsubsection=\count279
+\c@paragraph=\count280
+\c@subparagraph=\count281
+\c@figure=\count282
+\c@table=\count283
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen148
+)
+(/usr/share/texlive/texmf-dist/tex/latex/base/inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks17
+\inpenc@posthook=\toks18
+)
+(/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+)
+(/usr/share/texlive/texmf-dist/tex/generic/babel/babel.sty
+Package: babel 2026/01/26 v26.2 The multilingual framework for LuaLaTeX, pdfLaT
+eX and XeLaTeX
+\babel@savecnt=\count284
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding OT1) on input li
+ne 2078.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding OT1) on input li
+ne 2080.
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input lin
+e 2082.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input lin
+e 2083.
+LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) 
+on input line 2084.
+LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) 
+on input line 2086.
+LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) 
+on input line 2111.
+\U@D=\dimen149
+\l@unhyphenated=\language5
+
+(/usr/share/texlive/texmf-dist/tex/generic/babel/txtbabel.def)
+\bbl@readstream=\read2
+\bbl@dirlevel=\count285
+
+(/usr/share/texlive/texmf-dist/tex/generic/babel/locale/fr/babel-french.tex)
+Package babel Info: Importing font and identification data for french
+(babel)             from babel-fr.ini. Reported on input line 4330.
+
+(/usr/share/texlive/texmf-dist/tex/generic/babel-french/french.ldf
+Language: french 2025-08-15 v4.0e French support from the babel system
+
+(/usr/share/texlive/texmf-dist/tex/generic/babel-french/french3.ldf
+Language: french 2025-08-15 v3.7e French support from the babel system
+Package babel Info: Hyphen rules for 'french' set to \l@nohyphenation
+(babel)             (\language2). Reported on input line 87.
+
+
+Package babel Warning: No hyphenation patterns were preloaded for
+(babel)                the language 'French' into the format.
+(babel)                Please, configure your TeX system to add them and
+(babel)                rebuild the format. Now I will use the patterns
+(babel)                preloaded for \language=nohyphenation instead on input l
+ine 87.
+
+\FB@stdchar=\count286
+Package babel Info: Making : an active character on input line 273.
+Package babel Info: Making ; an active character on input line 274.
+Package babel Info: Making ! an active character on input line 275.
+Package babel Info: Making ? an active character on input line 276.
+\FBguill@level=\count287
+\FBold@everypar=\toks19
+\FB@Mht=\dimen150
+\mc@charclass=\count288
+\mc@charfam=\count289
+\mc@charslot=\count290
+\std@mcc=\count291
+\dec@mcc=\count292
+\FB@pardim=\dimen151
+\listindentFB=\dimen152
+\descindentFB=\dimen153
+\labelindentFB=\dimen154
+\labelwidthFB=\dimen155
+\leftmarginFB=\dimen156
+\parindentFFN=\dimen157
+\FBfnindent=\dimen158
+))) (/usr/share/texlive/texmf-dist/tex/latex/carlisle/scalefnt.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks20
+)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen159
+\Gin@req@width=\dimen160
+)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hyperref.sty
+Package: hyperref 2026-01-29 v7.01p Hypertext links for LaTeX
+
+(/usr/share/texlive/texmf-dist/tex/generic/iftex/iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+)
+(/usr/share/texlive/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pdfescape/pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(/usr/share/texlive/texmf-dist/tex/generic/infwarerr/infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+))
+(/usr/share/texlive/texmf-dist/tex/latex/hycolor/hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/nameref.sty
+Package: nameref 2026-01-29 v2.58 Cross-referencing by name of section
+
+(/usr/share/texlive/texmf-dist/tex/latex/refcount/refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+)
+(/usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+
+(/usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count293
+)
+(/usr/share/texlive/texmf-dist/tex/latex/etoolbox/etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count294
+)
+(/usr/share/texlive/texmf-dist/tex/generic/stringenc/stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
+)
+)
+\@linkdim=\dimen161
+\Hy@linkcounter=\count295
+\Hy@pagecounter=\count296
+
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/pd1enc.def
+File: pd1enc.def 2026-01-29 v7.01p Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+)
+(/usr/share/texlive/texmf-dist/tex/generic/intcalc/intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count297
+
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/puenc.def
+File: puenc.def 2026-01-29 v7.01p Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Hyper figures OFF on input line 4201.
+Package hyperref Info: Link nesting OFF on input line 4206.
+Package hyperref Info: Hyper index ON on input line 4209.
+Package hyperref Info: Plain pages OFF on input line 4216.
+Package hyperref Info: Backreferencing OFF on input line 4221.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4468.
+\c@Hy@tempcnt=\count298
+
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip17
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4807.
+\XeTeXLinkMargin=\dimen162
+
+(/usr/share/texlive/texmf-dist/tex/generic/bitset/bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
+)
+))
+\Fld@menulength=\count299
+\Field@Width=\dimen163
+\Fld@charsize=\dimen164
+Package hyperref Info: Hyper figures OFF on input line 6084.
+Package hyperref Info: Link nesting OFF on input line 6089.
+Package hyperref Info: Hyper index ON on input line 6092.
+Package hyperref Info: backreferencing OFF on input line 6099.
+Package hyperref Info: Link coloring OFF on input line 6104.
+Package hyperref Info: Link coloring with OCG OFF on input line 6109.
+Package hyperref Info: PDF/A mode OFF on input line 6114.
+\Hy@abspage=\count300
+\c@Item=\count301
+\c@Hfootnote=\count302
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+
+(/usr/share/texlive/texmf-dist/tex/latex/hyperref/hpdftex.def
+File: hpdftex.def 2026-01-29 v7.01p Hyperref driver for pdfTeX
+\Fld@listcount=\count303
+\c@bookmark@seq@number=\count304
+
+(/usr/share/texlive/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+Package: rerunfilecheck 2025-06-21 v1.11 Rerun checks for auxiliary files (HO)
+
+(/usr/share/texlive/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
+84.
+)
+\Hy@SectionHShift=\skip51
+)
+(/usr/share/texlive/texmf-dist/tex/latex/geometry/geometry.sty
+Package: geometry 2020/01/02 v5.9 Page Geometry
+
+(/usr/share/texlive/texmf-dist/tex/generic/iftex/ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+)
+\Gm@cnth=\count305
+\Gm@cntv=\count306
+\c@Gm@tempcnt=\count307
+\Gm@bindingoffset=\dimen165
+\Gm@wd@mp=\dimen166
+\Gm@odd@mp=\dimen167
+\Gm@even@mp=\dimen168
+\Gm@layoutwidth=\dimen169
+\Gm@layoutheight=\dimen170
+\Gm@layouthoffset=\dimen171
+\Gm@layoutvoffset=\dimen172
+\Gm@dimlist=\toks21
+)
+(/usr/share/texlive/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty
+Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
+
+\f@nch@headwidth=\skip52
+\f@nch@offset@elh=\skip53
+\f@nch@offset@erh=\skip54
+\f@nch@offset@olh=\skip55
+\f@nch@offset@orh=\skip56
+\f@nch@offset@elf=\skip57
+\f@nch@offset@erf=\skip58
+\f@nch@offset@olf=\skip59
+\f@nch@offset@orf=\skip60
+\f@nch@height=\skip61
+\f@nch@footalignment=\skip62
+\f@nch@widthL=\skip63
+\f@nch@widthC=\skip64
+\f@nch@widthR=\skip65
+\@temptokenb=\toks22
+)
+(/usr/share/texlive/texmf-dist/tex/latex/titlesec/titlesec.sty
+Package: titlesec 2025/01/04 v2.17 Sectioning titles
+\ttl@box=\box53
+\beforetitleunit=\skip66
+\aftertitleunit=\skip67
+\ttl@plus=\dimen173
+\ttl@minus=\dimen174
+\ttl@toksa=\toks23
+\titlewidth=\dimen175
+\titlewidthlast=\dimen176
+\titlewidthfirst=\dimen177
+)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/tabularx.sty
+Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
+
+(/usr/share/texlive/texmf-dist/tex/latex/tools/array.sty
+
+LaTeX Warning: You have requested release `2026/06/01' of LaTeX,
+               but only release `2025-11-01' is available.
+
+Package: array 2026/01/25 v2.7a Tabular extension package (FMi)
+\col@sep=\dimen178
+\ar@mcellbox=\box54
+\extrarowheight=\dimen179
+\NC@list=\toks24
+\extratabsurround=\skip68
+\backup@length=\skip69
+\ar@cellbox=\box55
+)
+\TX@col@width=\dimen180
+\TX@old@table=\dimen181
+\TX@old@col=\dimen182
+\TX@target=\dimen183
+\TX@delta=\dimen184
+\TX@cols=\count308
+\TX@ftn=\toks25
+) (/usr/share/texlive/texmf-dist/tex/latex/booktabs/booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen185
+\lightrulewidth=\dimen186
+\cmidrulewidth=\dimen187
+\belowrulesep=\dimen188
+\belowbottomsep=\dimen189
+\aboverulesep=\dimen190
+\abovetopsep=\dimen191
+\cmidrulesep=\dimen192
+\cmidrulekern=\dimen193
+\defaultaddspace=\dimen194
+\@cmidla=\count309
+\@cmidlb=\count310
+\@aboverulesep=\dimen195
+\@belowrulesep=\dimen196
+\@thisruleclass=\count311
+\@lastruleclass=\count312
+\@thisrulewidth=\dimen197
+)
+(/usr/share/texlive/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count313
+\float@exts=\toks26
+\float@box=\box56
+\@float@everytoks=\toks27
+\@floatcapt=\box57
+)
+(/usr/share/texlive/texmf-dist/tex/latex/caption/caption.sty
+Package: caption 2023/08/05 v3.6o Customizing captions (AR)
+
+(/usr/share/texlive/texmf-dist/tex/latex/caption/caption3.sty
+Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
+\caption@tempdima=\dimen198
+\captionmargin=\dimen199
+\caption@leftmargin=\dimen256
+\caption@rightmargin=\dimen257
+\caption@width=\dimen258
+\caption@indent=\dimen259
+\caption@parindent=\dimen260
+\caption@hangindent=\dimen261
+Package caption Info: Standard document class detected.
+Package caption Info: french babel package is loaded.
+)
+\c@caption@flags=\count314
+\c@continuedfloat=\count315
+Package caption Info: float package is loaded.
+Package caption Info: hyperref package is loaded.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count316
+\lst@gtempboxa=\box58
+\lst@token=\toks28
+\lst@length=\count317
+\lst@currlwidth=\dimen262
+\lst@column=\count318
+\lst@pos=\count319
+\lst@lostspace=\dimen263
+\lst@width=\dimen264
+\lst@newlines=\count320
+\lst@lineno=\count321
+\lst@maxwidth=\dimen265
+
+(/usr/share/texlive/texmf-dist/tex/latex/listings/lstpatch.sty
+File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
+)
+(/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
+\c@lstnumber=\count322
+\lst@skipnumbers=\count323
+\lst@framebox=\box59
+)
+(/usr/share/texlive/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2025/11/14 1.11b listings configuration
+))
+Package: listings 2025/11/14 1.11b (Carsten Heinz)
+
+==> First Aid for listings.sty no longer applied!
+    Expected:
+        2024/09/23 1.10c (Carsten Heinz)
+    but found:
+        2025/11/14 1.11b (Carsten Heinz)
+    so I'm assuming it got fixed.
+(/usr/share/texlive/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/enumitem/enumitem.sty
+Package: enumitem 2025/02/06 v3.11 Customized lists
+\labelindent=\skip70
+\enit@outerparindent=\dimen266
+\enit@toks=\toks29
+\enit@inbox=\box60
+\enit@count@id=\count324
+\enitdp@description=\count325
+)
+(/usr/share/texlive/texmf-dist/tex/latex/tools/longtable.sty
+Package: longtable 2026-01-28 v4.27 Multi-page Table package (DPC)
+\LTleft=\skip71
+\LTright=\skip72
+\LTpre=\skip73
+\LTpost=\skip74
+\LTchunksize=\count326
+\LTcapwidth=\dimen267
+\LT@head=\box61
+\LT@firsthead=\box62
+\LT@foot=\box63
+\LT@lastfoot=\box64
+\LT@gbox=\box65
+\LT@cols=\count327
+\LT@rows=\count328
+\c@LT@tables=\count329
+\c@LT@chunks=\count330
+\LT@p@ftn=\toks30
+)
+Package french3.ldf Info: Setting StandardItemizeEnv=true for
+(french3.ldf)             compatibility with enumitem package,
+(french3.ldf)             reported on input line 65.
+Package french3.ldf Info: Setting StandardEnumerateEnv=true for
+(french3.ldf)             compatibility with enumitem package,
+(french3.ldf)             reported on input line 65.
+
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count331
+)
+(./rapport_pfa.aux
+Package babel Info: 'french' activates 'french' shorthands.
+(babel)             Reported on input line 11.
+)
+\openout1 = `rapport_pfa.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 65.
+LaTeX Font Info:    ... okay on input line 65.
+LaTeX Info: Redefining \degres on input line 65.
+
+(/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count332
+\scratchdimen=\dimen268
+\scratchbox=\box66
+\nofMPsegments=\count333
+\nofMParguments=\count334
+\everyMPshowfont=\toks31
+\MPscratchCnt=\count335
+\MPscratchDim=\dimen269
+\MPnumerator=\count336
+\makeMPintoPDFobject=\count337
+\everyMPtoPDFconversion=\toks32
+) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+Package hyperref Info: Link coloring OFF on input line 65.
+
+(./rapport_pfa.out) (./rapport_pfa.out)
+\@outlinefile=\write3
+\openout3 = `rapport_pfa.out'.
+
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(71.13188pt, 455.24411pt, 71.13188pt)
+* v-part:(T,H,B)=(71.13188pt, 702.78308pt, 71.13188pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=455.24411pt
+* \textheight=702.78308pt
+* \oddsidemargin=-1.1381pt
+* \evensidemargin=-1.1381pt
+* \topmargin=-38.1381pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=12.0pt
+* \footskip=30.0pt
+* \marginparwidth=35.0pt
+* \marginparsep=10.0pt
+* \columnsep=10.0pt
+* \skip\footins=10.8pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: listings package is loaded.
+Package caption Info: longtable package is loaded.
+(/usr/share/texlive/texmf-dist/tex/latex/caption/ltcaption.sty
+Package: ltcaption 2021/01/08 v1.4c longtable captions (AR)
+)
+Package caption Info: End \AtBeginDocument code.
+\c@lstlisting=\count338
+ [1
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-di
+st/fonts/enc/dvips/cm-super/cm-super-t1.enc}]
+Underfull \hbox (badness 10000) in paragraph at lines 118--119
+
+ []
+
+
+pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has 
+been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.127 \chapter
+              *{Remerciements} [1
+
+] [2
+
+]
+Overfull \hbox (0.5445pt too wide) in paragraph at lines 142--143
+\T1/cmr/m/n/12 centralisées traditionnelles présentent des vulnérabilités struc
+turelles : points de défaillance
+ []
+
+
+Overfull \hbox (8.82864pt too wide) in paragraph at lines 142--143
+\T1/cmr/m/n/12 uniques (SPOF), risques de falsification documentaire, et absenc
+e de souveraineté numérique
+ []
+
+
+Overfull \hbox (13.95384pt too wide) in paragraph at lines 144--146
+\T1/cmr/m/n/12 proposant une plateforme 100% décentralisée de gestion des dossi
+ers médicaux. L'architecture
+ []
+
+
+Overfull \hbox (89.8602pt too wide) in paragraph at lines 148--149
+[]\T1/cmr/m/n/12 Un \T1/cmr/bx/n/12 chiffrement hybride \T1/cmr/m/n/12 combinan
+t AES-256-GCM (symétrique) et Curve25519/XSalsa20/Poly1305
+ []
+
+
+Overfull \hbox (1.40263pt too wide) in paragraph at lines 151--152
+[]\T1/cmr/m/n/12 L'application frontend, développée en \T1/cmr/bx/n/12 Next.js 
+14\T1/cmr/m/n/12 , orchestre l'ensemble des interactions
+ []
+
+
+Overfull \hbox (10.19084pt too wide) in paragraph at lines 151--152
+\T1/cmr/m/n/12 entre les différents acteurs du système de santé (Patients, Méde
+cins, Pharmacies, Assurances,
+ []
+
+
+Overfull \hbox (11.37775pt too wide) in paragraph at lines 161--162
+[]\T1/cmr/bx/n/12 Keywords : \T1/cmr/m/n/12 Blockchain, Substrate, ink !, IPFS,
+ Web3, Hybrid Encryption, Decentralized
+ []
+
+[3
+
+]
+Underfull \hbox (badness 10000) in paragraph at lines 178--179
+[]|\T1/cmr/m/n/12 Registre distribué, transparent et immuable,
+ []
+
+
+Underfull \hbox (badness 2932) in paragraph at lines 180--181
+\T1/cmr/m/n/12 par Parity Technologies, pour la construction de
+ []
+
+
+Underfull \hbox (badness 3525) in paragraph at lines 192--193
+[]|\T1/cmr/m/n/12 Algorithme de chiffrement authentifié asymétrique
+ []
+
+
+Underfull \hbox (badness 2310) in paragraph at lines 196--197
+[]|\T1/cmr/m/n/12 Portefeuille numérique stockant les paires de clés
+ []
+
+
+Underfull \hbox (badness 4569) in paragraph at lines 208--209
+[]|\T1/cmr/m/n/12 Unité de mesure du coût computationnel d'une
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 210--210
+[]|\T1/cmr/m/n/12 WebAssembly
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 210--211
+[]|\T1/cmr/m/n/12 Format d'instruction binaire portable, cible de
+ []
+
+[4
+
+]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[5] (./rapport_pfa.toc
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 8.
+
+Overfull \hbox (7.98015pt too wide) in paragraph at lines 33--33
+ [][] [][]\T1/cmr/m/n/12 Technologies utilisées pour la couche Blockchain (Back
+-end décentralisé)[] [][]  
+ []
+
+[6
+
+])
+\tf@toc=\write4
+\openout4 = `rapport_pfa.toc'.
+
+Package babel Info: 'french' activates 'french' shorthands.
+(babel)             Reported on input line 218.
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[7] (./rapport_pfa.lof)
+\tf@lof=\write5
+\openout5 = `rapport_pfa.lof'.
+
+ [8
+
+] (./rapport_pfa.lot)
+\tf@lot=\write6
+\openout6 = `rapport_pfa.lot'.
+
+ [9
+
+]
+Overfull \hbox (29.06393pt too wide) in paragraph at lines 227--228
+\T1/cmr/m/n/12 entre établissements, le manque d'interopérabilité, et surtout l
+a multiplication des cyberattaques
+ []
+
+
+Overfull \hbox (10.89055pt too wide) in paragraph at lines 229--230
+[]\T1/cmr/m/n/12 En parallèle, le circuit traditionnel des ordonnances souffre 
+de vulnérabilités exploitables :
+ []
+
+
+Overfull \hbox (6.35281pt too wide) in paragraph at lines 233--234
+\T1/cmr/m/n/12 cryptographiques immuables inscrites sur un registre distribué ^
+^V selon le principe fondateur
+ []
+
+
+Overfull \hbox (14.20215pt too wide) in paragraph at lines 235--236
+\T1/cmr/m/n/12 radicale : l'élimination totale du serveur d'application classiq
+ue (Node.js/MongoDB/Express)
+ []
+
+
+Overfull \hbox (5.84746pt too wide) in paragraph at lines 239--240
+[]\T1/cmr/bx/n/12 Chapitre 1 : \T1/cmr/m/n/12 Contexte général du projet ^^V pr
+oblématique, objectifs et méthodologie. 
+ []
+
+[10
+
+]
+Chapitre 1.
+
+Overfull \hbox (18.20003pt too wide) in paragraph at lines 258--259
+[]\T1/cmr/m/n/12 Le secteur médical repose actuellement sur des architectures ^
+^S Client-Serveur ^^T centralisées
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 284--285
+[]|\T1/cmr/m/n/12 Architecture ^^S Wallet-First ^^T : les acteurs
+ []
+
+
+Underfull \hbox (badness 4013) in paragraph at lines 284--285
+\T1/cmr/m/n/12 interagissent directement avec le réseau (peer-
+ []
+
+
+Underfull \hbox (badness 6268) in paragraph at lines 286--287
+[]|\T1/cmr/m/n/12 Chaque transition d'état (Prescrit $\OMS/cmsy/m/n/12 !$ \T1/c
+mr/m/n/12 Délivré
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 286--287
+\OMS/cmsy/m/n/12 !$ \T1/cmr/m/n/12 Remboursé) est horodatée et signée
+ []
+
+[11
+
+]
+Overfull \hbox (11.74086pt too wide) in paragraph at lines 295--296
+\T1/cmr/m/n/12 Rust (\T1/cmtt/m/n/12 Anchor\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 Cla
+im\T1/cmr/m/n/12 ), de la machine à état (\T1/cmtt/m/n/12 Prescribed $\OMS/cmsy
+/m/n/12 !$ \T1/cmtt/m/n/12 Delivered $\OMS/cmsy/m/n/12 !$ \T1/cmtt/m/n/12 Cance
+lled\T1/cmr/m/n/12 ),
+ []
+
+
+Overfull \hbox (3.59361pt too wide) in paragraph at lines 296--297
+[]\T1/cmr/bx/n/12 Sprint 2 ^^V Développement Smart Contract : \T1/cmr/m/n/12 Éc
+riture du contrat en ink !/Rust,
+ []
+
+
+Overfull \hbox (59.4552pt too wide) in paragraph at lines 297--298
+\T1/cmtt/m/n/12 medicalCrypto.ts \T1/cmr/m/n/12 (chiffrement AES-GCM, enveloppe
+s NaCl) et du module \T1/cmtt/m/n/12 chainContract.ts
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[12]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[13]
+Chapitre 2.
+
+Underfull \hbox (badness 1184) in paragraph at lines 325--326
+[]|\T1/cmr/m/n/12 Autorité médicale prescriptrice. Émet des événements
+ []
+
+
+Underfull \hbox (badness 2591) in paragraph at lines 325--326
+\T1/cmr/m/n/12 médicaux (Visites, Diagnostics) et des Ordonnances.
+ []
+
+
+Underfull \hbox (badness 2302) in paragraph at lines 327--328
+\T1/cmr/m/n/12 vérifie mathématiquement leur intégrité (comparaison
+ []
+
+
+Underfull \hbox (badness 7099) in paragraph at lines 329--330
+\T1/cmr/m/n/12 vérifier la légitimité des Claims, valide l'intégrité
+ []
+
+
+Underfull \hbox (badness 1325) in paragraph at lines 331--331
+[]|\T1/cmr/bx/n/12 Laboratoire /
+ []
+
+
+Overfull \hbox (5.264pt too wide) in paragraph at lines 333--333
+[]|\T1/cmr/bx/n/12 Administrateur| 
+ []
+
+
+Underfull \hbox (badness 2653) in paragraph at lines 333--334
+\T1/cmr/m/n/12 Gère les attributions de rôles via des ancrages de
+ []
+
+[14
+
+]
+Overfull \hbox (94.93126pt too wide) in paragraph at lines 347--348
+[]\T1/cmr/m/n/12 Enregistrement de la clé publique de chiffrement sur le contra
+t intelligent (\T1/cmtt/m/n/12 register_encryption_key\T1/cmr/m/n/12 ). 
+ []
+
+
+Overfull \hbox (40.00993pt too wide) in paragraph at lines 352--353
+[]\T1/cmr/m/n/12 Le médecin peut émettre une ordonnance chiffrée, l'ancrer sur 
+la blockchain (\T1/cmtt/m/n/12 store_anchor\T1/cmr/m/n/12 ),
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[15]
+Overfull \hbox (11.98335pt too wide) in paragraph at lines 367--368
+[]\T1/cmr/bx/n/12 Sécurité : \T1/cmr/m/n/12 Toutes les données médicales doiven
+t être chiffrées avant toute transmission.
+ []
+
+
+Overfull \hbox (89.05228pt too wide) in paragraph at lines 369--370
+\T1/cmr/m/n/12 secondes. Un système de cache avec TTL de 12 secondes est implém
+enté (\T1/cmtt/m/n/12 CHAIN_READ_CACHE_TTL_MS\T1/cmr/m/n/12 ). 
+ []
+
+
+Overfull \hbox (12.70953pt too wide) in paragraph at lines 371--372
+[]\T1/cmr/bx/n/12 Compatibilité : \T1/cmr/m/n/12 L'application doit fonctionner
+ sur les navigateurs modernes (Chrome,
+ []
+
+
+Overfull \hbox (10.25891pt too wide) in paragraph at lines 375--376
+[]\T1/cmr/m/n/12 Les diagrammes UML sont des représentations graphiques qui fac
+ilitent la compréhension
+ []
+
+
+Overfull \hbox (1.2318pt too wide) in paragraph at lines 380--381
+[]\T1/cmr/m/n/12 Le diagramme ci-dessous illustre les interactions et responsab
+ilités des différents acteurs
+ []
+
+<diagramme_cas_utilisation.png, id=407, 439.6425pt x 908.39375pt>
+File: diagramme_cas_utilisation.png Graphic file (type png)
+<use diagramme_cas_utilisation.png>
+Package pdftex.def Info: diagramme_cas_utilisation.png  used on input line 384.
+
+(pdftex.def)             Requested size: 455.24411pt x 940.65984pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[16]
+Overfull \vbox (262.37674pt too high) has occurred while \output is active []
+
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[17 <./diagramme_cas_utilisation.png (PNG copy)>]
+Overfull \hbox (29.5582pt too wide) in paragraph at lines 393--394
+[]\T1/cmr/m/n/12 Le \T1/cmr/bx/n/12 Médecin \T1/cmr/m/n/12 est l'autorité presc
+riptrice. Ses responsabilités incluent la création d'événements
+ []
+
+
+Overfull \hbox (2.61754pt too wide) in paragraph at lines 395--396
+[]\T1/cmr/m/n/12 La \T1/cmr/bx/n/12 Pharmacie \T1/cmr/m/n/12 agit comme un poin
+t de validation critique. Elle scanne les ordonnances,
+ []
+
+<diagramme_sequence.png, id=416, 1382.16376pt x 665.48625pt>
+File: diagramme_sequence.png Graphic file (type png)
+<use diagramme_sequence.png>
+Package pdftex.def Info: diagramme_sequence.png  used on input line 405.
+(pdftex.def)             Requested size: 455.24411pt x 219.18465pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[18 <./diagramme_sequence.png (PNG copy)>]
+<diagramme_sequence_pharmacie.png, id=424, 1435.3625pt x 1073.00874pt>
+File: diagramme_sequence_pharmacie.png Graphic file (type png)
+<use diagramme_sequence_pharmacie.png>
+Package pdftex.def Info: diagramme_sequence_pharmacie.png  used on input line 4
+24.
+(pdftex.def)             Requested size: 455.24411pt x 340.3081pt.
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[19 <./diagramme_sequence_pharmacie.png (PNG copy)>]
+<diagramme_sequence_assurance.png, id=438, 1103.12125pt x 1306.8825pt>
+File: diagramme_sequence_assurance.png Graphic file (type png)
+<use diagramme_sequence_assurance.png>
+Package pdftex.def Info: diagramme_sequence_assurance.png  used on input line 4
+44.
+(pdftex.def)             Requested size: 455.24411pt x 539.33499pt.
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[20]
+Overfull \hbox (8.27058pt too wide) in paragraph at lines 450--451
+[]\T1/cmr/m/n/12 Contrairement aux bases de données relationnelles (SQL) ou doc
+umentaires (MongoDB),
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 460--461
+[]|\T1/cmtt/m/n/12 kind \T1/cmr/m/n/12 (Prescription/Visit/LabResult/Operation)
+,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 460--461
+\T1/cmtt/m/n/12 owner\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 doctor\T1/cmr/m/n/12 , \T
+1/cmtt/m/n/12 pharmacy?\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 insurer?\T1/cmr/m/n/12 
+, \T1/cmtt/m/n/12 status
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 460--461
+\T1/cmr/m/n/12 (Prescribed/Delivered/Cancelled), \T1/cmtt/m/n/12 created_at\T1/
+cmr/m/n/12 ,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 462--463
+[]|\T1/cmtt/m/n/12 source_record_id\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 claimant\T1
+/cmr/m/n/12 , \T1/cmtt/m/n/12 insurer\T1/cmr/m/n/12 ,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 462--463
+\T1/cmtt/m/n/12 amount_requested\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 amount_approve
+d?\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 status
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 462--463
+\T1/cmr/m/n/12 (Pending/Approved/Rejected/Reimbursed),
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 464--465
+[]|\T1/cmtt/m/n/12 records: Mapping<RecordId, Anchor>\T1/cmr/m/n/12 ,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 464--465
+\T1/cmtt/m/n/12 claims: Mapping<ClaimId, Claim>\T1/cmr/m/n/12 , \T1/cmtt/m/n/12
+ access:
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 464--465
+\T1/cmtt/m/n/12 Mapping<(RecordId, AccountId), bool>\T1/cmr/m/n/12 ,
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[21 <./diagramme_sequence_assurance.png (PNG copy)>]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[22]
+Chapitre 3.
+
+Underfull \hbox (badness 1442) in paragraph at lines 510--511
+[]|\T1/cmr/m/n/12 Langage de programmation système développé par
+ []
+
+
+Underfull \hbox (badness 7273) in paragraph at lines 512--513
+[]|\T1/cmr/m/n/12 Framework modulaire open-source développé par
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 512--513
+\T1/cmr/m/n/12 Parity Technologies (créateurs de Polkadot). Il
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 512--513
+\T1/cmr/m/n/12 avec un consensus configurable. Nous utilisons
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 512--513
+\T1/cmtt/m/n/12 substrate-contracts-node \T1/cmr/m/n/12 comme environnement
+ []
+
+
+Underfull \hbox (badness 1960) in paragraph at lines 512--513
+\T1/cmr/m/n/12 d'exécution local avec stockage persistant dans le
+ []
+
+
+Underfull \hbox (badness 3977) in paragraph at lines 514--515
+[]|\T1/cmr/m/n/12 eDSL (Embedded Domain Specific Language) de
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 514--515
+\T1/cmr/m/n/12 l'écosystème Polkadot pour l'écriture de Smart
+ []
+
+
+Underfull \hbox (badness 7722) in paragraph at lines 514--515
+\T1/cmr/m/n/12 Contracts. Contrairement à Solidity (Ethereum),
+ []
+
+
+Underfull \hbox (badness 2707) in paragraph at lines 514--515
+\T1/cmr/m/n/12 ink ! est compilé en WebAssembly (Wasm) natif,
+ []
+
+
+Underfull \hbox (badness 1264) in paragraph at lines 514--515
+\T1/cmr/m/n/12 offrant des performances supérieures et la sécurité
+ []
+
+
+Underfull \hbox (badness 2096) in paragraph at lines 514--515
+\T1/cmr/m/n/12 et \T1/cmtt/m/n/12 #[ink(message)] \T1/cmr/m/n/12 simplifient la
+ déclaration des
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 516--516
+[]|\T1/cmr/bx/n/12 WebAssembly
+ []
+
+[23
+
+]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[24]
+Underfull \hbox (badness 10000) in paragraph at lines 550--551
+[]|\T1/cmr/m/n/12 Bibliothèque JavaScript pour la construction
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 550--551
+\T1/cmr/m/n/12 d'interfaces utilisateur dynamiques et réactives.
+ []
+
+
+Underfull \hbox (badness 1721) in paragraph at lines 552--553
+[]|\T1/cmr/m/n/12 Framework utilitaire CSS permettant de concevoir
+ []
+
+
+Underfull \hbox (badness 3029) in paragraph at lines 552--553
+\T1/cmr/m/n/12 et une typographie monospace évoquant l'univers
+ []
+
+
+Underfull \hbox (badness 3769) in paragraph at lines 554--555
+\T1/cmr/m/n/12 frontend est écrit en TypeScript, apportant une
+ []
+
+
+Underfull \hbox (badness 1163) in paragraph at lines 569--570
+\T1/cmr/m/n/12 Substrate. Elle gère l'estimation des frais de Gas,
+ []
+
+
+Underfull \hbox (badness 1221) in paragraph at lines 571--572
+\T1/cmr/m/n/12 asymétrique Curve25519/XSalsa20/Poly1305 utilisées
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 573--574
+[]|\T1/cmr/m/n/12 API native du navigateur pour les opérations
+ []
+
+
+Underfull \hbox (badness 2150) in paragraph at lines 573--574
+\T1/cmr/m/n/12 cryptographiques (AES-GCM, SHA-256, PBKDF2).
+ []
+
+
+Underfull \hbox (badness 3333) in paragraph at lines 573--574
+\T1/cmr/m/n/12 Disponible uniquement dans un contexte sécurisé
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[25]
+Underfull \hbox (badness 2103) in paragraph at lines 590--591
+\T1/cmr/m/n/12 ink ! sur Substrate. Commande de build : \T1/cmtt/m/n/12 cargo
+ []
+
+
+Underfull \hbox (badness 1314) in paragraph at lines 592--593
+[]|\T1/cmr/m/n/12 Interface web pour interagir manuellement avec le
+ []
+
+
+Underfull \hbox (badness 1024) in paragraph at lines 596--597
+[]|\T1/cmr/m/n/12 Outil de génération de diagrammes UML à partir
+ []
+
+
+Underfull \hbox (badness 1014) in paragraph at lines 596--597
+\T1/cmr/m/n/12 de descriptions textuelles, utilisé pour produire les
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[26]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[27]
+Chapitre 4.
+
+Overfull \hbox (20.12036pt too wide) in paragraph at lines 621--621
+|[]\T1/cmr/bx/n/17.28 Mécanique de Chiffrement Hybride (Zero-Knowledge)| 
+ []
+
+
+Overfull \hbox (78.27428pt too wide) in paragraph at lines 622--623
+\T1/cmr/m/n/12 module \T1/cmtt/m/n/12 medicalCrypto.ts \T1/cmr/m/n/12 implément
+e une architecture d'enveloppe hybride (\T1/cmtt/m/n/12 msce-hybrid-aesgcm-v2\T
+1/cmr/m/n/12 ). 
+ []
+
+
+Overfull \hbox (1.82895pt too wide) in paragraph at lines 626--627
+[]\T1/cmr/bx/n/12 Génération de la clé symétrique : \T1/cmr/m/n/12 Le navigateu
+r génère une clé AES-256 aléatoire
+ []
+
+[28
+
+]
+Overfull \hbox (60.95343pt too wide) in paragraph at lines 631--632
+\T1/cmtt/m/n/12 version\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 algorithm\T1/cmr/m/n/12
+ , \T1/cmtt/m/n/12 ivB64\T1/cmr/m/n/12 , \T1/cmtt/m/n/12 ciphertextB64\T1/cmr/m
+/n/12 , \T1/cmtt/m/n/12 payloadHashHex\T1/cmr/m/n/12 , et un tableau \T1/cmtt/m
+/n/12 encryptedKeys[]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 645--646
+[]|\T1/cmr/m/n/12 Ordonnances chiffrées (schema
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 647--648
+[]|\T1/cmr/m/n/12 Événements médicaux (visites,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 651--652
+[]|\T1/cmr/m/n/12 Documents gouvernance (rôles,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 657--657
+[]|\T1/cmr/m/n/12 Horodatages de
+ []
+
+
+Overfull \hbox (107.81706pt too wide) in paragraph at lines 668--669
+[]\T1/cmr/m/n/12 Le système interroge les ancrages de gouvernance sur la blockc
+hain et IPFS (\T1/cmtt/m/n/12 resolveWalletRoleOnChain\T1/cmr/m/n/12 )
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[29]
+Overfull \hbox (4.32964pt too wide) in paragraph at lines 676--677
+\T1/cmr/m/n/12 de l'utilisateur via sa signature cryptographique. Contrairement
+ aux systèmes traditionnels,
+ []
+
+
+Overfull \hbox (4.6214pt too wide) in paragraph at lines 676--677
+\T1/cmr/m/n/12 aucun mot de passe n'est requis. L'identité est prouvée mathémat
+iquement par la possession
+ []
+
+
+Overfull \hbox (0.75703pt too wide) in paragraph at lines 684--685
+[]\T1/cmr/m/n/12 Le pipeline de chiffrement hybride est déclenché (\T1/cmtt/m/n
+/12 encryptMedicalPayloadOrPlain\T1/cmr/m/n/12 ). 
+ []
+
+
+Overfull \hbox (17.11423pt too wide) in paragraph at lines 686--687
+[]\T1/cmr/m/n/12 L'enveloppe chiffrée est envoyée à l'API Pinata (\T1/cmtt/m/n/
+12 uploadJsonToIpfs\T1/cmr/m/n/12 ) avec un mécanisme
+ []
+
+<screenshots/medecin/dashboard.png, id=498, 1867.97874pt x 964.60374pt>
+File: screenshots/medecin/dashboard.png Graphic file (type png)
+<use screenshots/medecin/dashboard.png>
+Package pdftex.def Info: screenshots/medecin/dashboard.png  used on input line 
+695.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[30]
+Overfull \hbox (32.03273pt too wide) in paragraph at lines 706--707
+[]\T1/cmr/m/n/12 Le Smart Contract est interrogé (\T1/cmtt/m/n/12 get_anchor\T1
+/cmr/m/n/12 ) : l'ordonnance est-elle valide (\T1/cmtt/m/n/12 Prescribed\T1/cmr
+/m/n/12 ) ?
+ []
+
+
+Overfull \hbox (9.10904pt too wide) in paragraph at lines 709--710
+\T1/cmr/m/n/12 comparé strictement avec celui stocké on-chain (\T1/cmtt/m/n/12 
+verifyHashOnChain\T1/cmr/m/n/12 ). Si un attaquant
+ []
+
+
+Overfull \hbox (30.78575pt too wide) in paragraph at lines 710--711
+[]\T1/cmr/m/n/12 Si tout est conforme, le pharmacien clique sur ^^S Délivrer ^^
+T. La transaction \T1/cmtt/m/n/12 mark_delivered
+ []
+
+<screenshots/pharmcaie/dashboard.png, id=515, 1867.97874pt x 964.60374pt>
+File: screenshots/pharmcaie/dashboard.png Graphic file (type png)
+<use screenshots/pharmcaie/dashboard.png>
+Package pdftex.def Info: screenshots/pharmcaie/dashboard.png  used on input lin
+e 716.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[31 <./screenshots/medecin/dashboard.png>]
+<screenshots/pharmcaie/scanning qr code.png, id=528, 1867.97874pt x 964.60374pt
+>
+File: screenshots/pharmcaie/scanning qr code.png Graphic file (type png)
+<use screenshots/pharmcaie/scanning qr code.png>
+Package pdftex.def Info: screenshots/pharmcaie/scanning qr code.png  used on in
+put line 723.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+<screenshots/pharmcaie/qr code scanned.png, id=529, 1867.97874pt x 964.60374pt>
+
+File: screenshots/pharmcaie/qr code scanned.png Graphic file (type png)
+<use screenshots/pharmcaie/qr code scanned.png>
+Package pdftex.def Info: screenshots/pharmcaie/qr code scanned.png  used on inp
+ut line 730.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[32 <./screenshots/pharmcaie/dashboard.png> <./screenshots/pharmcaie/scanning q
+r code.png>]
+Overfull \hbox (2.84535pt too wide) in paragraph at lines 742--743
+\T1/cmr/m/n/12 ordonnance délivrée, spécifie le montant et l'assureur, et la tr
+ansaction \T1/cmtt/m/n/12 submit_claim
+ []
+
+<screenshots/patient/dashboard.png, id=537, 1867.97874pt x 964.60374pt>
+File: screenshots/patient/dashboard.png Graphic file (type png)
+<use screenshots/patient/dashboard.png>
+Package pdftex.def Info: screenshots/patient/dashboard.png  used on input line 
+748.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[33 <./screenshots/pharmcaie/qr code scanned.png>]
+Overfull \hbox (43.9603pt too wide) in paragraph at lines 759--760
+[]\T1/cmr/m/n/12 Pour chaque Claim, le système récupère l'ancrage source (\T1/c
+mtt/m/n/12 get_anchor(source_record_id)\T1/cmr/m/n/12 ),
+ []
+
+
+Overfull \hbox (25.24963pt too wide) in paragraph at lines 762--763
+[]\T1/cmr/m/n/12 Après le virement bancaire externe, l'agent clôture le cycle a
+vec \T1/cmtt/m/n/12 mark_claim_reimbursed\T1/cmr/m/n/12 ,
+ []
+
+<screenshots/assurance/Pasted image.png, id=543, 1867.97874pt x 964.60374pt>
+File: screenshots/assurance/Pasted image.png Graphic file (type png)
+<use screenshots/assurance/Pasted image.png>
+Package pdftex.def Info: screenshots/assurance/Pasted image.png  used on input 
+line 767.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[34 <./screenshots/patient/dashboard.png>]
+<screenshots/laboratoir/dashboard.png, id=554, 1867.97874pt x 964.60374pt>
+File: screenshots/laboratoir/dashboard.png Graphic file (type png)
+<use screenshots/laboratoir/dashboard.png>
+Package pdftex.def Info: screenshots/laboratoir/dashboard.png  used on input li
+ne 777.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+<screenshots/hopital/dahsboard.png, id=555, 1867.97874pt x 964.60374pt>
+File: screenshots/hopital/dahsboard.png Graphic file (type png)
+<use screenshots/hopital/dahsboard.png>
+Package pdftex.def Info: screenshots/hopital/dahsboard.png  used on input line 
+787.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[35 <./screenshots/assurance/Pasted image.png> <./screenshots/laboratoir/dashbo
+ard.png>]
+Overfull \hbox (23.41669pt too wide) in paragraph at lines 793--794
+[]\T1/cmr/m/n/12 L'administrateur est l'entité de gouvernance. Il attribue les 
+rôles on-chain aux professionnels
+ []
+
+<screenshots/admin/dashboard.png, id=562, 1867.97874pt x 964.60374pt>
+File: screenshots/admin/dashboard.png Graphic file (type png)
+<use screenshots/admin/dashboard.png>
+Package pdftex.def Info: screenshots/admin/dashboard.png  used on input line 79
+7.
+(pdftex.def)             Requested size: 455.24411pt x 235.07153pt.
+
+Underfull \hbox (badness 1097) in paragraph at lines 814--814
+[]|\T1/cmr/m/n/12 Distribution des clés
+ []
+
+
+Underfull \hbox (badness 2073) in paragraph at lines 814--815
+[]|\T1/cmr/m/n/12 Le Smart Contract intègre un registre de clés
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 814--815
+\T1/cmr/m/n/12 via \T1/cmtt/m/n/12 encryption_key_of\T1/cmr/m/n/12 . Un mode dé
+gradé
+ []
+
+
+Underfull \hbox (badness 1796) in paragraph at lines 814--815
+\T1/cmr/m/n/12 (\T1/cmtt/m/n/12 PLAIN_IPFS_FALLBACK\T1/cmr/m/n/12 ) est activé 
+si la clé est
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 816--816
+[]|\T1/cmr/m/n/12 Coûts de Gas
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 818--818
+[]|\T1/cmtt/m/n/12 crypto.subtle
+ []
+
+
+Underfull \hbox (badness 2285) in paragraph at lines 818--819
+\T1/cmr/m/n/12 documentation de déploiement et utilisation de
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 820--820
+[]|\T1/cmr/m/n/12 Persistance
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 820--821
+[]|\T1/cmr/m/n/12 Migration de \T1/cmtt/m/n/12 --tmp \T1/cmr/m/n/12 (éphémère) 
+vers \T1/cmtt/m/n/12 -d
+ []
+
+
+Underfull \hbox (badness 5652) in paragraph at lines 820--821
+\T1/cmtt/m/n/12 ./blockchain-data \T1/cmr/m/n/12 (persistant) pour conserver
+ []
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[36 <./screenshots/hopital/dahsboard.png> <./screenshots/admin/dashboard.png>]
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 14.49998pt, for example:
+(fancyhdr)                \setlength{\headheight}{14.49998pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-2.49998pt}.
+
+[37]
+Overfull \hbox (23.12517pt too wide) in paragraph at lines 836--838
+[]\T1/cmr/m/n/12 Au cours de ce travail, nous avons conçu et implémenté un écos
+ystème complet comprenant : 
+ []
+
+
+Overfull \hbox (16.01006pt too wide) in paragraph at lines 852--853
+[]\T1/cmr/bx/n/12 Interopérabilité HL7/FHIR : \T1/cmr/m/n/12 Adapter les schéma
+s de données pour être compatibles
+ []
+
+[38
+
+]
+Overfull \hbox (6.94429pt too wide) in paragraph at lines 864--865
+[]\T1/cmr/m/n/12 Parity Technologies. \T1/cmr/m/it/12 Substrate Developer Docum
+entation\T1/cmr/m/n/12 . []$\T1/cmtt/m/n/12 https : / / docs . substrate .
+ []
+
+
+Overfull \hbox (18.05148pt too wide) in paragraph at lines 873--874
+[]\T1/cmr/m/n/12 TweetNaCl.js. \T1/cmr/m/it/12 TweetNaCl.js - A port of TweetNa
+Cl to JavaScript\T1/cmr/m/n/12 . []$\T1/cmtt/m/n/12 https : / / tweetnacl .
+ []
+
+[39
+
+] (./rapport_pfa.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-01-19>
+ ***********
+Package rerunfilecheck Info: File `rapport_pfa.out' has not changed.
+(rerunfilecheck)             Checksum: 597CCB312FFB712C0F886B65A0E2FE2B;9915.
+ ) 
+Here is how much of TeX's memory you used:
+ 15895 strings out of 469472
+ 256671 string characters out of 5468909
+ 694047 words of memory out of 6000000
+ 44196 multiletter control sequences out of 15000+600000
+ 638990 words of font info for 61 fonts, out of 8000000 for 9000
+ 36 hyphenation exceptions out of 8191
+ 75i,11n,79p,655b,710s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share
+/texlive/texmf-dist/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texliv
+e/texmf-dist/fonts/type1/public/cm-super/sfbx1728.pfb></usr/share/texlive/texmf
+-dist/fonts/type1/public/cm-super/sfbx2488.pfb></usr/share/texlive/texmf-dist/f
+onts/type1/public/cm-super/sfcc1200.pfb></usr/share/texlive/texmf-dist/fonts/ty
+pe1/public/cm-super/sfrm1200.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/cm-super/sfrm1440.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-
+super/sfti1200.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/s
+fti1728.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/cm-super/sftt1200
+.pfb>
+Output written on rapport_pfa.pdf (40 pages, 1530925 bytes).
+PDF statistics:
+ 694 PDF objects out of 1000 (max. 8388607)
+ 601 compressed objects within 7 object streams
+ 188 named destinations out of 1000 (max. 500000)
+ 490 words of extra memory for PDF output out of 10000 (max. 10000000)
+

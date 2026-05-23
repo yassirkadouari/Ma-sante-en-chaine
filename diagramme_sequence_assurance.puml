@@ -1,0 +1,42 @@
+@startuml
+autonumber
+actor "Patient" as P
+actor "Assureur" as A
+participant "Frontend (Next.js)" as F
+participant "Smart Contract\n(Substrate)" as SC
+participant "IPFS (Pinata)" as I
+
+== Soumission du Claim par le Patient ==
+P -> F : Sélectionne une ordonnance délivrée
+F -> SC : get_anchor(RecordId)
+SC --> F : Retourne l'ancrage (statut = DELIVERED)
+F -> F : Vérifie que le statut == DELIVERED
+F -> SC : submit_claim(ClaimId, RecordId, Insurer, Montant)
+SC -> SC : Vérifie que le caller == owner de l'ancrage
+SC -> SC : Vérifie que le montant > 0
+SC --> F : Émet l'événement ClaimSubmitted
+F --> P : Affiche "Demande de remboursement soumise"
+
+== Audit et Décision par l'Assurance ==
+A -> F : Ouvre le dashboard Assurance
+F -> SC : list_claim_ids() + get_claim()
+SC --> F : Retourne la liste des Claims (PENDING)
+F -> SC : get_anchor(source_record_id)
+SC --> F : Retourne l'ancrage médical associé
+F -> I : Télécharge le document via CID
+I --> F : Retourne le document (vérifie Hash)
+F -> F : Compare Hash IPFS vs Hash Blockchain
+F --> A : Affiche pastille "CERTIFIÉ" ou "WARNING"
+A -> F : Décide : Approuver (montant) ou Rejeter
+F -> SC : review_claim(ClaimId, approve, montant, raison)
+SC -> SC : Vérifie caller == insurer + statut == PENDING
+SC --> F : Émet l'événement ClaimReviewed
+
+== Virement et Clôture ==
+A -> F : Clique sur "Virement"
+F -> SC : mark_claim_reimbursed(ClaimId, paymentRefHash)
+SC -> SC : Vérifie statut == APPROVED
+SC -> SC : Change statut → REIMBURSED
+SC --> F : Émet l'événement ClaimReimbursed
+F --> A : Affiche "Virement effectué - Réf: xxxxx"
+@enduml

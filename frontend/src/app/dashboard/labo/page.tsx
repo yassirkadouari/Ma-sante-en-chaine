@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
-  import { Beaker, Search, Send, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, Upload, UserSearch, ShieldCheck } from "lucide-react";
-  import { apiRequest } from "@/lib/api";
-  import { uploadJsonToIpfs } from "@/lib/ipfsClient";
-  import { encryptMedicalPayloadOrPlain } from "@/lib/medicalCrypto";
+import { useState } from "react";
+import { Beaker, Search, Send, User, ClipboardList, CheckCircle2, AlertCircle, Landmark, UserSearch } from "lucide-react";
+import { apiRequest } from "@/lib/api";
+
 type PatientArchive = {
   walletAddress: string;
   summary: {
@@ -36,73 +35,38 @@ export default function LaboDashboard() {
   const [searchWallet, setSearchWallet] = useState("");
   const [archive, setArchive] = useState<PatientArchive | null>(null);
 
-  // PDF Upload State
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleRecordResult = async () => {
     try {
       setBusy(true);
       setStatus(null);
-      
-      const file = fileInputRef.current?.files?.[0];
-      if (!file) throw new Error("Le fichier PDF de l'analyse est obligatoire.");
+
       if (!patientWallet) throw new Error("Le wallet du patient est obligatoire.");
+      if (!testType) throw new Error("Le type d'analyse est obligatoire.");
+      if (!resultSummary) throw new Error("Le résumé des résultats est obligatoire.");
 
-        const toBase64 = (f: File) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(f);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = error => reject(error);
-        });
-
-        const pdfBase64 = await toBase64(file);
-
-        const documentPayload = {
+      const response = await apiRequest<{ eventId: string }>({
+        method: "POST",
+        path: "/labo/results",
+        signed: true,
+        body: {
           patientWallet,
           testType,
           resultSummary,
           amountClaim: amountClaim ? Number(amountClaim) : 0,
-          documentData: pdfBase64,
-          fileName: file.name
-        };
-
-        const packaged = await encryptMedicalPayloadOrPlain(documentPayload, {
-          recipientWallets: [patientWallet],
-        });
-
-        if (!packaged.encrypted && packaged.missingRecipientWallets.length > 0) {
-          console.warn(
-            `[MSC] Missing recipient encryption key(s): ${packaged.missingRecipientWallets.join(", ")}. ` +
-            "Uploading plain JSON payload for lab document."
-          );
         }
+      });
 
-        const uploaded = await uploadJsonToIpfs(packaged.payload, `labo-event-${Date.now()}.json`);
-        const documentCid = uploaded.cid;
+      setStatus({
+        type: "success",
+        msg: `Résultat enregistré et ancré sur Blockchain. ID: ${response.eventId.slice(0, 8)}`
+      });
 
-        const response = await apiRequest<{ eventId: string }>({
-          method: "POST",
-          path: "/labo/results",
-          signed: true,
-          body: {
-            patientWallet,
-            testType,
-            resultSummary,
-            amountClaim: amountClaim ? Number(amountClaim) : 0,
-            documentCid
-          }
-        });
-
-        setStatus({ 
-          type: "success", 
-          msg: `Résultat enregistré et ancré sur Blockchain. ID: ${response.eventId.slice(0, 8)}`         });
-
-        setPatientWallet("");
-        setTestType("");
-        setResultSummary("");
-        setAmountClaim("");
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      } catch (error: any) {      setStatus({ type: "error", msg: error.message });
+      setPatientWallet("");
+      setTestType("");
+      setResultSummary("");
+      setAmountClaim("");
+    } catch (error: any) {
+      setStatus({ type: "error", msg: error.message });
     } finally {
       setBusy(false);
     }
@@ -113,8 +77,8 @@ export default function LaboDashboard() {
     try {
       setBusy(true);
       setArchive(null);
-      const data = await apiRequest<PatientArchive>({ 
-        path: `/records/patient/${searchWallet}` 
+      const data = await apiRequest<PatientArchive>({
+        path: `/records/patient/${searchWallet}`
       });
       setArchive(data);
     } catch (error: any) {
@@ -149,7 +113,7 @@ export default function LaboDashboard() {
         {/* Entry Form */}
         <div className="bg-neutral-900/50 p-8 rounded-[2rem] border border-neutral-800 shadow-xl space-y-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-3 uppercase tracking-tighter">
-            <ClipboardList className="text-emerald-500" /> Saisie Analyse & Scellage PDF
+            <ClipboardList className="text-emerald-500" /> Saisie Résultat d&apos;Analyse
           </h2>
 
           <div className="space-y-4">
@@ -157,10 +121,10 @@ export default function LaboDashboard() {
               <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Identité Patient (Wallet)</label>
               <div className="relative">
                 <User className="absolute left-3 top-3.5 text-neutral-600" size={16} />
-                <input 
+                <input
                   value={patientWallet}
                   onChange={(e) => setPatientWallet(e.target.value)}
-                  placeholder="0x..."
+                  placeholder="5Gx..."
                   className="w-full bg-black border border-neutral-800 p-3.5 pl-10 rounded-xl text-xs text-white outline-none focus:border-emerald-500/50 transition-all font-mono"
                 />
               </div>
@@ -168,68 +132,44 @@ export default function LaboDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                  <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Type d'Analyse</label>
-                  <input 
-                    value={testType}
-                    onChange={(e) => setTestType(e.target.value)}
-                    placeholder="ex: Bilan Lipidique, PCR..."
-                    className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-emerald-500/50 transition-all font-bold"
-                  />
+                 <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Type d&apos;Analyse</label>
+                 <input
+                   value={testType}
+                   onChange={(e) => setTestType(e.target.value)}
+                   placeholder="ex: Bilan Lipidique, PCR..."
+                   className="w-full bg-black border border-neutral-800 p-3.5 rounded-xl text-xs text-white outline-none focus:border-emerald-500/50 transition-all font-bold"
+                 />
                </div>
                <div>
-                  <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Frais Laboratoire (DH)</label>
-                  <div className="relative">
-                    <input 
-                      value={amountClaim}
-                      onChange={(e) => setAmountClaim(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full bg-black border border-neutral-800 p-3.5 pr-10 rounded-xl text-xs text-white outline-none focus:border-amber-500/50 transition-all font-mono"
-                    />
-                    <Landmark className="absolute right-3 top-3.5 text-neutral-700" size={16} />
-                  </div>
+                 <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Frais Laboratoire (DH)</label>
+                 <div className="relative">
+                   <input
+                     value={amountClaim}
+                     onChange={(e) => setAmountClaim(e.target.value)}
+                     placeholder="0.00"
+                     className="w-full bg-black border border-neutral-800 p-3.5 pr-10 rounded-xl text-xs text-white outline-none focus:border-amber-500/50 transition-all font-mono"
+                   />
+                   <Landmark className="absolute right-3 top-3.5 text-neutral-700" size={16} />
+                 </div>
                </div>
             </div>
 
             <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Compte-rendu (PDF Scellé)</label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-800 rounded-2xl cursor-pointer bg-black/40 hover:bg-black/60 hover:border-emerald-500/30 transition-all group">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-3 text-neutral-600 group-hover:text-emerald-500 transition-colors" />
-                    <p className="text-xs text-neutral-500 tracking-tighter uppercase font-bold">Sélectionner le rapport d'analyse</p>
-                  </div>
-                  <input type="file" ref={fileInputRef} accept="application/pdf" className="hidden" />
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-neutral-900/50 p-4 border border-neutral-800 rounded-xl space-y-2 mb-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span className="text-[10px] text-emerald-500 uppercase font-black tracking-widest">Ancrage IPFS Sécurisé</span>
-              </div>
-              <p className="text-[10px] text-neutral-400 leading-relaxed">
-                Le PDF est chiffré si la clé destinataire existe, sinon ancré en JSON IPFS pour éviter le blocage.
-              </p>
-            </div>
-
-
-            <div>
-              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Observations</label>
-              <textarea 
+              <label className="text-[10px] text-neutral-500 uppercase font-black mb-2 block tracking-widest">Observations / Résumé</label>
+              <textarea
                 value={resultSummary}
                 onChange={(e) => setResultSummary(e.target.value)}
-                placeholder="Résumé des conclusions..."
+                placeholder="Résumé des conclusions de l'analyse..."
                 className="w-full h-24 bg-black border border-neutral-800 p-4 rounded-xl text-xs text-neutral-300 outline-none focus:border-emerald-500/50 transition-all resize-none"
               />
             </div>
 
-            <button 
+            <button
               disabled={busy || !patientWallet || !testType || !resultSummary}
               onClick={handleRecordResult}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-3 disabled:opacity-30 uppercase tracking-widest text-xs"
             >
-              {busy ? "[ SCELLAGE_EN_COURS... ]" : "[ ANCRER_SCELLÉ_BLOCKCHAIN ]"}
+              {busy ? "[ SCELLAGE_EN_COURS... ]" : "[ ANCRER_RÉSULTAT_BLOCKCHAIN ]"}
               <Send size={18} />
             </button>
           </div>
@@ -242,13 +182,13 @@ export default function LaboDashboard() {
                 <UserSearch className="text-amber-500" /> Archives Patient
               </h2>
               <div className="flex gap-2">
-                 <input 
+                 <input
                     value={searchWallet}
                     onChange={(e) => setSearchWallet(e.target.value)}
                     placeholder="Scanner wallet patient..."
                     className="flex-1 bg-black border border-neutral-800 p-3 rounded-xl text-xs text-white outline-none focus:border-amber-500/50 transition-all font-mono"
                  />
-                 <button 
+                 <button
                     onClick={fetchArchive}
                     disabled={busy || !searchWallet}
                     className="p-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl transition-all disabled:opacity-30"
@@ -286,7 +226,7 @@ export default function LaboDashboard() {
                  <AlertCircle className="text-emerald-500" size={18} /> Intégrité des Données
               </h3>
               <p className="text-[10px] text-neutral-400 leading-relaxed font-bold italic">
-                 "Chaque analyse scellée génère une empreinte unique. Ce certificat numérique garantit que le rapport PDF consulté par les autres praticiens est strictement identique à l'original émis ici."
+                 &quot;Chaque analyse scellée génère une empreinte unique. Ce certificat numérique garantit que le résultat consulté par les autres praticiens est strictement identique à l&apos;original émis ici.&quot;
               </p>
            </div>
         </div>

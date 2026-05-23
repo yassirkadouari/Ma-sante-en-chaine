@@ -1,0 +1,1595 @@
+2023 / 2024
+
+Développement et Conception D’une Application Web Intégration
+Des Nouveaux Employés
+
+Louktam Lamiaa
+
+Mme.Remmach Hassnae
+M.BenDriouch Amine
+XX – 09 - 2024
+
+Dédicace
+A mes chers parents
+Abd-alillah Louktam & Khadija Elbaleidi
+Pour leur amour inconditionnel, leur soutien sans faille et leurs précieux conseils. Vous
+avez toujours cru en moi et m’avez donné les moyens de réaliser mes rêves. Merci pour tout ce
+que vous avez fait et continuez de faire pour moi.
+A mon frère et mes sœurs
+Mohammed Louktam, Mariem Louktam & Khadija Dahoub,
+Pour leur présence réconfortante et leur encouragement constant. Vous avez été une
+source d’inspiration et de motivation tout au long de ce parcours. Merci pour vos sourires, vos
+blagues et votre soutien.
+A mon beau-neveu
+Ghayto
+Pour sa joie de vivre et son sourire contagieux, tu es une source de bonheur et de
+motivation pour moi. Merci pour les moments de bonheur que tu apportes dans ma vie.
+A toute ma famille
+Pour leur compréhension et leur soutien durant les moments difficiles. Votre présence
+et vos encouragements m’ont aidé à surmonter les obstacles et à continuer à avancer. Merci
+pour votre amour et votre gentillesse.
+A mes amis,
+Pour leur amitié sincère, leur compréhension et leurs encouragements, vous avez rendu
+ce voyage plus agréable et supportable, Merci pour les moments de joie, de rire et de partage.
+A mon encadrante pédagogique,
+Mme.Remmach Hassnae
+Pour ses conseils avisés, son soutien et sa patience. Merci de m’avoir guidé tout au long
+de ce projet et de m’avoir aidé à surmonter les défis rencontrés. Votre expertise et votre
+dévouement ont été essentiels à la réussite de ce travail.
+A mon encadrant en entreprise
+Ms.BenDriouch Amin
+Pour son soutien pratique et ses conseils précieux. Merci de m’avoir accueilli dans
+l’entreprise et de m’avoir offert des opportunités d’apprentissage concrètes. Votre expertise et
+votre encadrement m’ont permis de mettre en pratique mes connaissances académiques dans
+un contexte professionnel.
+II
+
+Remerciements
+Après avoir terminé mes études, il est maintenant temps de présenter
+mon rapport de stage de fin d’études. Je suis extrêmement
+reconnaissant et j’ai un grand plaisir à exprimer ma gratitude envers
+toutes les personnes qui m’ont soutenu et accompagné tout au long de
+cette aventure enrichissante.
+En premier lieu, je souhaite exprimer ma profonde gratitude envers
+l’entreprise qui m’a hébergé tout au long de ces cinq mois de stage. Je
+tiens à exprimer ma gratitude envers MENARA HOLDING pour
+m’avoir donné cette occasion précieuse d’apporter mes connaissances
+théoriques à la pratique et d’explorer le monde du travail dans le
+domaine de l’informatique. Grace à l’entreprise, j’ai pu prendre part
+activement à des projets concrets, ce qui m’a offert une expérience
+inestimable.
+Je souhaite également exprimer ma gratitude envers mon encadrante,
+tout au long de mon stage, je tiens à remercier Mme REMMACH
+HASSNAE pour sa disponibilité, ses conseils avisés et son précieux
+encadrement. Grace à ses conseils experts, j’ai pu améliorer mes
+compétences professionnelles et poursuivre mes connaissances dans ce
+domaine, la bienveillance de sa présence il a joué un rôle crucial dans
+ma réussite.
+De plus, je tiens à remercier les membres du personnel administratif de
+l’EMSI qui ont facilité la réalisation de ce stage et qui ont contribué au
+bon déroulement de ma formation universitaire. Mon épanouissement
+académique a été grandement influencé par leur dévouement et leur
+engagement en faveur de l’excellence pédagogique.
+Je tiens également à souligner les membres du jury d’évaluation qui ont
+consacré du temps à la lecture attentive de mon rapport et à
+l’évaluation de ma présentation. Leurs retours constructifs m’ont
+permis de prendre conscience de mes points forts et de mes axes
+d’amélioration
+III
+
+Abstract
+Currently in the final year of my studies in Computer Science and Networks, I have acquired
+solid theoretical and practical background that has prepared me to tackle complex technological
+challenges. My academic journey has allowed me to develop skills in programming and
+cybersecurity. To put these skills into practice and further deepen them, I completed a fivemonth final internship at MENARA HOLDING. This internship provides me with a valuable
+opportunity to consolidate my knowledge, improve my technical skills, and learn how to
+manage concrete projects while working in a team.
+I was responsible for designing and creating a web application named “Welcome-Wise”. This
+application aims to simplify and enhance the integration of new employees by providing them
+with all the necessary information about the company culture, internal procedures, and their
+role within the organization.
+“Welcome-Wise” involves the development of an application that facilitates the integration of
+new employees by offering specific onboarding paths or each department, evaluation quizzes,
+and an integration schedule for the onboarding process into an interactive and engaging
+experience, allowing new employees to familiarize themselves autonomously with the
+company’s culture and procedures.
+To achieve this goal, advanced technologies were implemented. The front-end of the
+application was developed in React, while the back-end was built in Java with Spring Boot for
+the API service. Additionally, the integration of the Open-AI API allowed for the incorporation
+of dynamic quiz features to evaluate the employess’understanding ad’s progress.
+Working on this project not only helped me acquire advanced technical skills but also resulted
+in the creation of a valuable tool for the human resources department.“Welcome-Wise”
+provides an effective way to plan and track the onboarding journey of new employees, making
+the process more structured and engaging.
+Keywords:
+MENARA HOLDING, web application, Welcome-Wise, evaluation quizzes, React, Java,
+Spring Boot, Open-AI, API.
+
+IV
+
+Résumé
+Actuellement en dernière année de formation d’ingénieur en informatique et réseaux, j’ai acquis
+une solide formation théorique et pratique qui m’a préparé à relever des défis technologiques
+complexes. Mon parcours académique m’a permis de développer des compétences en
+programmation, en sécurité informatique, Afin de mettre en pratique ces compétences et de les
+approfondir, j’ai effectué un stage de fin d’études de cinq mois au sein de l’entreprise
+MENARA HOLDING. Ce stage m’a offert une précieuse opportunité de consolider mes
+connaissances, d’améliorer mes compétences techniques, et d’apprendre à gérer des projets
+concerts tout en travaillant en équipe.
+J’ai été chargé de concevoir et créer une application web nommée « Welcome-Wise ». Cette
+application vise à simplifier et à améliorer l’intégration des nouveaux employés en leur
+fournissant toutes les informations nécessaires sur la culture d’entreprise, les procédures
+internes, et leur rôle au sein de l’organisation.
+« Welcome-Wise » comprend le développement d’une application qui facilite l’intégration des
+nouveaux employés en leur offrant des parcours d’intégration spécifiques à chaque
+département, des quiz d’évaluation, et un planning d’intégration pour le département des
+ressources humaines. L’objectif principal était de transformer le processus d’intégration en une
+expérience interactive et engageante, permettant ainsi aux nouveaux employés de se familiariser
+de manière autonome avec la culture et les procédures de l’entreprise.
+Pour atteindre cet objectif, des technologies avancées ont été mises en œuvre. Le front-end de
+l’éolisation a été développé en React. Tandis que le back-end a été réalisé en Java avec Spring
+Boot pour les services API. En outre, l’intégration de l’API Open-AI a permis d’incorporer des
+fonctionnalités de quiz dynamiques, visant à évaluer la compréhension et le progrès des
+employés.
+En travaillant sur ce projet, non seulement des compétences techniques avancées ont été
+acquises, mais un outil précieux pour le département des ressources humaines a également été
+créé. « Welcome-Wise » offre un moyen efficace de planifier et de suivre le parcours
+d’intégration des nouveaux employés, rendant ainsi le processus pus structure et engageant.
+Mots-Clés: Menara Holding, Application web, Welcome-Wise, quiz d’évaluation, React, Java,
+Spring Boot, API Open-AI.
+V
+
+Glossaire
+Terme
+API
+
+Définition
+Application Programming Interface
+
+Interface de programmation qui permet à
+différents logiciels de communiquer entre eux
+
+API REST
+
+Style d’architecture pour la conception d’APIS
+
+Representation State Transfer
+
+web
+JWT
+
+JSON Web Token
+
+Un standard pour la transmission sécurisée
+d’informations entre parties
+
+HTTPS
+
+HyperText Transfer Protocol Secure
+
+Version sécurisée du HTTP
+
+SQL
+
+Structured Transfer Protocol Secure
+
+Langage de programmation utilise pour gérer
+et manipuler des bases de données
+relationnelles
+
+CRUD
+
+Restful API
+
+CREATE, READ, UPDATE,
+
+Operations de base pour manipuler des
+
+DELETE
+
+données
+
+Representational State Transfer
+
+Un style d’architecture pour concevoir des
+services web
+
+Micro-Services Une architecture ou une application est constituée de services indépendants
+CSS
+
+CASCADING Style Sheets
+
+Langage de feuille de style utilise pour décrire
+la présentation d’un document HTML.
+
+HTML
+
+HyperText Markup Language
+
+Langage de balisage utilise pour créer et
+structurer des pages web
+
+VI
+
+Liste des figures
+Figure 1.1:Diagramme de GANTT ______________________________________________ 9
+Figure 2. 2:Diagramme cas d'utilisation. ________________________________________ 14
+Figure 2. 3:Diagramme de classe ______________________________________________ 16
+Figure 2. 4:Diagramme de Séquence Global _____________________________________ 17
+Figure 2. 5:Diagramme de Séquence cas d’administrateur __________________________ 19
+Figure 2.6:Diagramme d'activités de l'administrateur ______________________________ 21
+Figure 2.7:Diagramme d’activités de l’employé __________________________________ 22
+Figure 4. 8:Architecture micro-service du projet __________________________________ 32
+Figure 4.9:Page d'authentification _____________________________________________ 35
+Figure 4.10:Page d'accueil dédiée au rôle d’administrateur ________________________ 36
+Figure 4.11: Formulaire des départements ______________________________________ 36
+Figure 4.12 : Formulaire d’ajout de département _________________________________ 37
+Figure 4.13:Formulaire d'update et suppression d'un département ____________________ 37
+Figure 4.14:Page Gestion des employés _________________________________________ 38
+Figure 4.15:Fomulaire d'ajouter un nouvel employé _______________________________ 38
+Figure 4.16:Formulaire de gestion des formations ________________________________ 39
+Figure 4.17:Formulaire d'ajouter une formation __________________________________ 39
+Figure 4.18: Page d’accueil pour les utilisateurs ayant le rôle ‘USER’ ________________ 40
+Figure 4.19:Page d'accès aux formations________________________________________ 41
+Figure 4.20:Liste des formations spécifiques _____________________________________ 41
+Figure 4.21:Terminaison de la liste des formations ________________________________ 42
+
+VII
+
+Liste des tableaux
+Tableau 1. 1: Les principaux secteurs d'activité de Menara Holding ___________________ 3
+Tableau 1. 2: Fiche technique de l'entreprise ______________________________________ 4
+Tableau 1. 3:Les Sprints ______________________________________________________ 6
+Tableau 2. 4: Les acteurs de l’application _______________________________________ 11
+Tableau 2. 5:Les interactions des acteurs ________________________________________ 18
+
+VIII
+
+Table des matières
+ABSTRACT ................................................................................................................................................... IV
+RESUME ........................................................................................................................................................ V
+GLOSSAIRE .................................................................................................................................................. VI
+LISTE DES FIGURES ................................................................................................................................. VII
+LISTE DES TABLEAUX ............................................................................................................................ VIII
+INTRODUCTION GENERALE .................................................................................................................... 1
+CHAPITRE 1 : CONTEXTE GENERAL DU PROJET.............................................................................. 2
+1.1 INTRODUCTION............................................................................................................................................. 3
+1.2 PRESENTATION DE L’ENTREPRISE ............................................................................................................... 3
+1.2.1 Présentation générale [1] ....................................................................................................................... 3
+1.2.2 Fiche technique de l’entreprise [2] ........................................................................................................ 4
+1.3 PRESENTATION DU PROJET .......................................................................................................................... 4
+1.3.1 Problématique du projet ....................................................................................................................... 4
+1.3.2 Objectifs du projet................................................................................................................................. 5
+1.4 CONDUITE DU PROJET .................................................................................................................................. 5
+1.4.1 Méthodologie du projet [3] ..................................................................................................................... 5
+1.4.2 Planification du projet [6] ...................................................................................................................... 8
+1.5 CONCLUSION ................................................................................................................................................ 9
+CHAPITRE 2 : ANALYSE ET CONCEPTION .......................................................................................... 10
+2.1 INTRODUCTION........................................................................................................................................... 11
+2.2 DEFINITION DES ACTEURS.......................................................................................................................... 11
+2.3 SPECIFICATION DES BESOINS .................................................................................................................... 11
+2.3.1 Besoins fonctionnels ........................................................................................................................... 11
+2.3.2 Besoins non fonctionnels ................................................................................................................... 12
+2.4 CONCEPTION DU PROJET............................................................................................................................ 13
+2.4.1 Diagramme de cas d’utilisation.......................................................................................................... 13
+2.4.2 Diagramme de classe .......................................................................................................................... 15
+2.4.3 Diagramme de séquence ..................................................................................................................... 17
+2.4.4 Diagramme d’activités ........................................................................................................................ 20
+2.5 CONCLUSION .............................................................................................................................................. 23
+CHAPITRE 3 : TECHNOLOGIES ET OUTILS UTILISES ...................................................................... 24
+3.1 INTRODUCTION........................................................................................................................................... 25
+
+IX
+
+3.2 TECHNOLOGIES .......................................................................................................................................... 25
+................................................................................................................................................................................... 26
+
+3.3 OUTILS........................................................................................................................................................ 28
+3.4 CONCLUSION .............................................................................................................................................. 30
+CHAPITRE 4 : ARCHITECTURE TECHNIQUE & REALISATION .................................................... 31
+4.1 INTRODUCTION........................................................................................................................................... 32
+4.2 ARCHITECTURE TECHNIQUE DE L’APPLICATION ...................................................................................... 32
+4.3 PRESENTATION DE L’APPLICATION ........................................................................................................... 35
+4.3.1 Accès à l’application........................................................................................................................... 35
+4.3.2 La page d’accueil de l’application ..................................................................................................... 35
+4.3.3 Page de gestion des départements ...................................................................................................... 36
+4.3.4 Formulaires d’ajout et de modification, et suppression des départements ....................................... 37
+4.3.5 Page de gestion des employés ............................................................................................................. 38
+4.3.6 Formulaire d’ajout d’un employé ...................................................................................................... 38
+4.3.7 Gestion des formations ....................................................................................................................... 39
+4.3.8 Page d’accueil pour les utilisateurs ayant le rôle ‘USER’ ................................................................ 40
+4.3.9 Page de suivre des formations pour les utilisateurs ayant le rôle ‘USER’ ....................................... 40
+4.3.10 Liste des formations a suivre ............................................................................................................ 41
+4.4 CONCLUSION .............................................................................................................................................. 42
+CONCLUSION GENERALE ET PERSPECTIVE ..................................................................................... 43
+REFERENCES ............................................................................................................................................. 44
+
+X
+
+Introduction générale
+Dans un environnement économique de plus en plus compétitif, l’intégration efficace des
+nouveaux employés est cruciale pour les entreprises, car elle améliorer leur satisfaction, leur
+rétention, leur engagement et leur productivité, En adoptant des solutions numériques
+innovantes, les entreprises peuvent moderniser leurs processus d’accueil, se démarquer face à
+la concurrence, améliorer le développement des compétences internes et suivre les tendances
+de l’intelligence artificielle.
+C’est dans ce contexte que MENARA HOLDING a développé « Welcome-Wise », une
+application web destinée à optimiser le processus d’intégration des nouveaux employés, Cette
+application transforme cette étape en une expérience interactive, engageante et éducative, en
+fournissant aux nouveaux arrivants toutes les informations nécessaires sur la culture
+d’entreprise, les procédures internes et leur rôle au sein de l’organisation.
+La réalisation de « Welcome-Wise » a débuté par une analyse approfondie des besoins
+spécifiques des nouveaux employés, prenant en compte les défis et les contraintes propres à
+leur intégration. Une attention particulière a été portée à l’interface utilisateur, visant à rendre
+l’application accessible même pour les utilisateurs novices en technologie. Le processus étapes
+rigoureuses. La conception initiale a impliqué l’identification des fonctionnalités essentielles et
+des interactions requises, suivie par la mise en œuvre de ses éléments avec un accent sur la
+robustesse, la sécurité et la fiabilité. A travers des itérations successives de développement et
+de tests, l’application a été affinée pour offrir une expérience optimale aux utilisateurs.
+Ce rapport est structure en quatre chapitres distincts. Le premier chapitre introduit le contexte
+général du projet, en explorant les défis spécifiques rencontrés par les nouveaux employés lors
+de leur intégration et la manière dont une solution technologique peut répondre à ces besoins.
+Le deuxième chapitre détaille l’analyse et la conception de l’application, en mettant en lumière
+les aspects clés de l’architecture conceptuelle qui soutiennent la solution développée, Enfin, le
+troisième chapitre présente les technologies sélectionnées, les outils utilisés, le dernier chapitre
+c’est la réalisation et ainsi que l’architecture technique mise en place pour assurer la robustesse
+et la sécurité de l’application, Ce chapitre offre également une vue d’ensemble détaillée de
+l’application finale, en explorant en profondeur les fonctionnalités clés telles que la gestion des
+informations d’entreprise.
+
+1
+
+Chapitre 1 : CONTEXTE GENERAL DU
+PROJET
+
+2
+
+1.1 Introduction
+Dans ce chapitre, l'organisme d'accueil, MENARA HOLDING, où le stage de fin
+d’études a été effectué, est présenté. Ce chapitre offre une vue d'ensemble du projet d'intégration
+des nouveaux employés, en abordant sa description, ses objectifs, la méthodologie adoptée, les
+technologies utilisées, et les outils de planification, y compris le diagramme de Gantt.
+
+1.2 Présentation de l’entreprise
+1.2.1 Présentation générale [1]
+Menara Holding est un groupe marocain diversifié présent dans plusieurs secteurs clés
+de l’économie, avec un accent particulier sur le BTP et la construction. Fondé en 1976 sous le
+nom de Transport Menara, le groupe s’est progressivement développé et diversifié pour devenir
+en 2006 Menara Holding, une entreprise comptant aujourd’hui plus de 2000 collaborateurs
+répartis dans 6 villes du royaume.
+Les principaux secteurs d’activité de Menara Holding sont :
+Tableau 1. 1: Les principaux secteurs d'activité de Menara Holding
+BTP et Urbanisme
+Transport et Logistique
+Immobilier
+Divers
+Social
+
+Le groupe s’est bâti pierre après pierre grâce à une stratégie visionnaire et une volonté d’innover
+constante. Menara Holding se caractérise par une organisation orientée vers le développement
+humain et la responsabilité sociale.
+Parmi les filiales clés du groupe figurent Menara Prefa, spécialisée dans la production de béton
+préfabriqué depuis 2002 et devenue un leader dans le BTP au Maroc, ainsi que Menara
+Université, une université d’entreprise dédiée à la formation et au développement des
+compétences dans les métiers du BTP.
+Aujourd’hui, Menara Holding se positionne comme un acteur majeur du développement
+économique au Maroc et à l’international, en recherchant constamment des solutions innovantes
+pour répondre aux besoins d’un marché en pleine expansion.
+3
+
+1.2.2 Fiche technique de l’entreprise [2]
+Voici une fiche technique détaillée sur l’entreprise qui permet d’en apprendre davantage
+sur les informations générales, les chiffres clés ainsi que les principaux projets et la stratégie de
+développement de ce groupe majeur du paysage économique marocain, elle montre comment
+Menara Holding se bâtit pierre après pierre pour devenir un acteur incontournable, notamment
+dans les secteurs du BTP, de l’immobilier et de la logistique.
+Tableau 1. 2: Fiche technique de l'entreprise
+Information générales
+Raison sociale
+
+Ménara Holding
+
+Forme juridique
+
+Société Anonyme
+
+Capital social
+
+300 000 000 DHS
+
+Année de création
+
+1976 (sous le nom de Transport Menara)
+
+Siege social
+
+Casablanca, Maroc
+Chiffres clés
+
+Collaborateurs
+
+Plus de 2000
+
+Localisation
+
+Plus de 6 villes au Maroc
+
+Nombre de sociétés filiales
+
+10 sociétés
+Projets et Stratégie
+
+Partenariat avec la Fondation MAScIR pour la recherche et développement dans le BTP
+Développement de solutions innovantes pour répondre aux besoins d'un marché en expansion
+Poursuite de la croissance et diversification des activités sur l'ensemble de la chaîne de valeur
+du BTP
+
+1.3 Présentation du projet
+1.3.1 Problématique du projet
+Menara Holding fait face à des défis dans l’intégration de ses nouveaux employés,
+caractérisés pas un manque de structuration du parcours d’intégration, une communication
+inefficace dans des informations cruciales sur la culture d’entreprise et les procédures internes,
+ainsi qu’un suivi inadéquat de la compréhension et de l’assimilation des nouveaux employés.
+
+4
+
+1.3.2 Objectifs du projet
+Le projet vise à transformer le processus d’intégration des nouveaux employés en une
+expérience interactive et engageante. Grâce à cette application, les nouveaux employés pourront
+se familiariser de manière autonome avec la culture et les procédures de l’entreprise. Un
+système de quiz dynamique est également intégré pour évaluer leur compréhension et leur
+progrès tout au long de leur parcours d’intégration.
+Une autre fonctionnalité importante de l'application est de fournir aux départements
+Administration et RH un outil pour planifier et suivre le parcours d’intégration des employés.
+Cela permettra une gestion efficace et personnalisée du processus d’intégration, en assurant que
+chaque nouvel employé reçoit les informations et le soutien nécessaires à son adaptation rapide
+à l’entreprise.
+En résumé, cette application vise à rendre le processus d’intégration non seulement plus
+efficace, mais également plus agréable pour les nouveaux employés, tout en offrant des outils
+précieux pour le suivi et la planification aux départements Administration et RH.
+
+1.4 Conduite du projet
+1.4.1 Méthodologie du projet [3]
+La méthodologie adoptée pour le projet « Welcome-Wise » est la méthode SCRUM.
+Scrum est un cadre de travail agile qui permet de gérer des projets complexes et d’adapter le
+développement en cours de route pour mieux répondre aux besoins changeants. Contrairement
+aux méthodes traditionnelles, Scrum se concentre sur des cycles de développement courts
+appelés sprints, généralement de deux à quatre semaines, au cours desquels une partie du projet
+est développée, testée et révisée. Cette approche itérative et incrémentale favorise la
+collaboration étroite entre les membres de l’équipe et les parties prenantes, assurant ainsi une
+amélioration continue du produit.
+Dans le cadre de ce projet, le Product Owner est le responsable du service ‘Aatif
+MOUMANE’. Le rôle du Product Owner est crucial puisqu’il est chargé de définir les priorités
+du projet, de gérer le backlog et de garantir que le produit final répond aux attentes des
+utilisateurs et aux objectifs commerciaux,
+Le Scrum Master, Ms.Amine Bendriouch, est responsable de la facilitation des processus
+Scrum, de la suppression des obstacles rencontrés par l’équipe et de l’amélioration de la
+productivité.
+5
+
+Enfin, je suis le seul membre de l’équipe et du développement, ce qui me permet de
+m’investir pleinement dans chaque aspect du projet, de la conception à l’implémentation, en
+passant par les tests et la maintenance. Cette structure allégée permet une communication fluide
+et une réactivité accrue face aux défis rencontrés au cours du projet.
+Ce tableau offre une vue d’ensemble des différents sprints, avec des objectifs et des tâches
+spécifiques pour chaque période.
+Tableau 1. 3:Les Sprints
+Sprint
+1
+
+Durée
+
+Objectif du sprint
+
+Une semaine Préparation et validation
+du sujet
+
+Taches Principales
+
+Critères de Réussite
+
+-Préparation de dossier de
+
+Sujet valide et
+
+stage
+
+technologies choisies.
+
+-Discussion de sujet et
+problématique
+-Confirmation et validation
+du sujet
+-Discussion des technologies
+a utilisées.
+
+2
+
+Une semaine Recherche et conception
+initiale
+
+-Recherche sur les nouvelles
+
+Interfaces, proposées
+
+technologies
+
+et conception
+
+-Première proposition des
+
+schématisée
+
+interfaces
+-Schématisation de la
+conception des diagrammes
+
+3
+
+Une semaine Essais pratiques et
+
+-Premier essai pratique
+
+Interfaces proposées
+
+-deuxième proposition des
+
+Conception adaptée
+
+conception au cahier des
+
+interfaces
+
+et validée
+
+charges
+
+-Etude du cahier des charges
+
+interfaces Desktop
+
+4
+
+Une semaine Adaptation de la
+
+6
+
+-adaptation de la conception
+selon les besoins du cahier
+des charges
+Validation de la conception
+définitive
+
+5
+
+Une semaine Validation des interfaces -Révision des modèles
+
+Interfaces validées et
+
+et recherche pour le
+
+d’interfaces avec scrum
+
+recherches effectuées
+
+développement
+
+master
+-Des recherches pour le
+développement front-end [7]
+
+6&7
+
+Deux
+
+Rédaction du rapport et
+
+-Rédaction du rapport (page
+
+Rapport rédigé et
+
+semaines
+
+recherches
+
+de garde, organisme
+
+recherches effectuées
+
+d’accueil),
+
+avec des formations)
+
+-Recherche à domicile sur
+Spring Boot, React [7] [8]
+-Prends des formations en
+ligne (React, Open-Ai) [4]
+
+8
+
+Une semaine Développement Frontend
+
+9
+
+Une semaine Création de la base de
+données et test
+
+-Exécution d’une Template
+
+Template Font-end
+
+pour le front-end
+
+exécutée
+
+-Création d’une partie de la
+
+-Base de données
+
+base de données
+
+créée et quiz test
+
+-Test de la partie quiz
+
+10
+
+11
+
+Une semaine Intégration de Chat-GPT -Essais pour l’intégration de
+
+Une semaine Développement Backend et API Chat-GPT
+
+Essais d’intégration
+
+Chat-GPT [5]
+
+en cours
+
+-Intégration d l’API Chat-
+
+API Chat-GPT
+
+GPT [5]
+
+intégrée et services
+
+-Création d’autres services
+
+créés
+
+7
+
+12 &
+
+Trois
+
+Formation et
+
+-Développement back-end
+
+13 &
+
+semaines
+
+développement back-
+
+-Formation pour l’intégration end avancé et
+
+end
+
+des API [4]
+
+formation complétée
+
+Rapport rédigé
+
+14
+
+Développement back-
+
+15 &
+
+Deux
+
+Arrêt de travail
+
+- Rédaction de la suite du
+
+16
+
+semaines
+
+Rédaction du rapport
+
+rapport
+
+17 &
+
+Deux
+
+Développement back-
+
+-Résolutions des erreurs
+
+Gestion des erreurs et
+
+18
+
+semaines
+
+end
+
+-Continuation dans la
+
+services
+
+création des services
+
+19 &
+
+Deux
+
+Front-end et tests
+
+-Recommençassions de
+
+Front-end & Back-
+
+20
+
+semaines
+
+unitaires
+
+front-end
+
+end, Tests
+
+-Des unitaires pour des
+services back-end
+-Connexion Front-end et
+Back-end
+
+1.4.2 Planification du projet [6]
+Le projet a été organisé par l’utilisation du diagramme de GANTT.
+Un outil essentiel pour la planification et le suivi des tâches. Le diagramme de GANTT permet
+de visualiser la chronologie des différentes étapes du projet, de définir les délais, et d’identifier
+les dépendances entre les tâches. En utilisant cet outil, nous avons pu segmenter le projet en
+phases distinctes et allouer du temps à chacune, tout en s’assurant que les jalons importants sont
+respectés.
+Chaque tâche est assignée à une période précise, et les chevauchements entre les tâches sont
+clairement représentés, facilitant ainsi la gestion des ressources et la coordination des efforts.
+Grace au diagramme de GANTT nous pouvons suivre l’avancement du projet en temps réel et
+ajuster nos plans en fonction des progrès réalisés et des éventuels obstacles rencontrés. Cela
+nous permet de maintenir une vue d’ensemble claire et de garantir le respect des délais fixes.
+
+8
+
+Figure 1.1:Diagramme de GANTT
+
+1.5 Conclusion
+Ce chapitre a permis d'établir une vision claire du projet, de définir ses objectifs et de
+planifier notre travail à l'aide d'un diagramme de Gantt. La présentation succincte de Menara
+Holding a fourni une vue d'ensemble claire et concise du groupe, mettant en lumière ses
+activités et ses valeurs fondamentales. Cette section a été cruciale pour introduire l'entreprise.
+Nous sommes maintenant prêts à entamer la phase suivante du projet, qui consiste à mettre en
+œuvre les différentes fonctionnalités de l'application.
+
+9
+
+Chapitre 2 : Analyse et conception
+
+10
+
+2.1 Introduction
+Dans cette section, le processus de développement adopté pour le projet d'application
+web-mobile d'intégration sera abordé. Le processus de développement peut varier en fonction
+de la méthodologie choisie, qu'il s'agisse d'une approche agile comme Scrum ou d'une
+méthodologie plus traditionnelle basée sur les phases de conception, de développement et de
+test. Ainsi, le processus spécifique utilisé pour ce projet sera expliqué en détail.
+
+2.2 Définition des acteurs
+Les acteurs jouent un rôle essentiel dans la conception d'un projet, représentant les
+diverses parties prenantes qui interagissent avec le système ou l'application en cours de
+développement. Dans le contexte de ce système, les acteurs qui interagissent sont :
+Tableau 2. 4: Les acteurs de l’application
+ACTEUR
+
+ROLE
+Gestion des employés
+
+Administrateur
+
+Gestion des départements
+Gestion des formations et des quiz
+Gestion des réunions
+
+Responsable
+
+Gestion des employés
+Intégration réunions
+
+Employé
+
+Consulter des formations
+Passer des quiz
+
+2.3 Spécification des besoins
+2.3.1 Besoins fonctionnels
+Au cours de l’étude et de l’analyse du projet, trois types de besoins fonctionnels ont été
+distingués :
+
+
+Les besoins relatifs au parcours d’intégration sont les suivants:
+o Contenu interactif sur la culture d’entreprise : Présentation de la culture et des
+valeurs de l’entreprise, modules spécifiques pour chaque département.
+
+11
+
+o Formation et modules spécifiques : Session de formation interactive pour
+différents aspects du travail, modules de formation adaptés à chaque poste ou
+département.
+
+
+Les besoins relatifs au quiz dynamique sont les suivants :
+o Création de quiz : Possibilité de créer des quiz à la fin de chaque module pour
+évaluer la compréhension des nouveaux employés. Utilisation de Chat-GPT pour
+générer des questions de quiz dynamiques et pertinentes en fonction du contenu
+appris.
+o Suivi et évaluation des employées : suivi des résultats des quiz pour évaluer la
+progression et les besoins de formation supplémentaires, Rapport détails sur la
+performance des employés.
+
+
+
+Besoins fonctionnels additionnels :
+o Passage de Quiz : Système de quiz régulier pour maintenir et évaluer les
+connaissances, Feedback immédiat sur les résultats.
+o Suivi des employés : Suivi des progrès des employés dans leur parcours
+d’intégration et de formation.
+o Planification de réunions : Fonctionnalité de planification de réunions entre les
+responsables.
+
+2.3.2 Besoins non fonctionnels
+Les besoins non fonctionnels du projet incluent plusieurs aspects clés :
+
+
+Temps de réponse rapide :
+o En termes de performance, l'application doit avoir un temps de réponse rapide
+pour l’interaction et la capacité à gérer simultanément un grand nombre
+d’utilisateurs.
+
+
+
+Sécurité Fiable :
+o Il est essentiel de protéger les données personnelles des employés et d'assurer
+une authentification sécurisée pour accéder aux parcours d’intégration.
+
+
+
+La compatibilité multi-Platform :
+o l'application doit fonctionner sur divers navigateurs web.
+
+12
+
+2.4 Conception du projet
+Les diagrammes UML sont des représentations graphiques qui facilitent la
+compréhension et la communication entre les concepteurs, les développeurs, les testeurs et les
+parties prenantes d'un projet. Ils permettent de modéliser les différentes perspectives d'un
+système, de capturer ses exigences, son architecture, son comportement, son flux d'information
+et bien d'autres aspects.
+2.4.1 Diagramme de cas d’utilisation
+Un diagramme de cas d'utilisation est une représentation graphique qui décrit les
+interactions entre les acteurs (utilisateurs externes ou systèmes) et un système informatique ou
+une application. Il met en évidence les différents scénarios possibles où les acteurs interagissent
+avec le système pour atteindre des objectifs spécifiques, en montrant les actions et les
+événements qui se produisent à chaque étape de ces interactions.
+Le diagramme de cas d’utilisation illustre les interactions et responsabilités des différents
+acteurs impliqués dans le système de l'application "WelcomeWise". Cette application webmobile est conçue pour optimiser le processus d'intégration des nouveaux employés, en les
+familiarisant avec la culture d'entreprise, les procédures internes, et leurs rôles au sein de
+l'organisation.
+
+13
+
+Figure 2. 2:Diagramme cas d'utilisation.
+Le diagramme ci-dessus indique que :
+L'Administrateur joue un rôle crucial dans la gestion de l'application. Ses responsabilités
+incluent la gestion des employés et des départements, le suivi des employés, la planification des
+QCMs, et l'organisation des réunions. Ces tâches sont essentielles pour maintenir une
+administration efficace et pour s'assurer que l'intégration des nouveaux employés se déroule
+sans accroc.
+Le Responsable(RH) est principalement chargé d'assister aux réunions, d'afficher et d'accéder
+au planning de l'application, de gérer l'authentification des utilisateurs, et de se familiariser avec
+la culture d'entreprise. Ces responsabilités permettent aux responsables de guider les nouveaux
+employés de manière adéquate et de s'assurer qu'ils s'intègrent bien dans l'organisation.
+14
+
+L'Employé utilise l'application pour consulter les départements, suivre des formations
+spécifiques, et passer des QCMs. Ces activités permettent aux employés de se familiariser avec
+l'entreprise de manière autonome et interactive, tout en évaluant leurs connaissances et leur
+progression au sein de l'organisation.
+Ce diagramme montre les interactions incluses et étendues entre les acteurs et les
+fonctionnalités de l'application, soulignant ainsi l'importance de chaque rôle dans le processus
+global d'intégration.
+2.4.2 Diagramme de classe
+Un diagramme de classe est une représentation graphique qui illustre la structure
+statique d'un système informatique en montrant ses classes, leurs attributs, leurs méthodes et
+les relations entre elles. Chaque classe représente un concept ou un objet du système avec des
+caractéristiques et des comportements spécifiques. Les relations entre les classes, telles que les
+associations, les généralisations et les dépendances, sont également mises en évidence pour
+illustrer les liens et les interactions entre les différents éléments du système.
+Le diagramme de classe illustre la structure et les relations des différentes classes impliquées
+dans le système de l'application "Welcome-Wise". Cette application web-mobile est conçue
+pour optimiser le processus d'intégration des nouveaux employés, en modélisant les éléments
+essentiels comme les utilisateurs, les modules de formation, les tâches à accomplir, et les
+communications internes. Chaque classe représente un aspect spécifique de l'application,
+détaillant ses attributs et ses méthodes. Les relations entre les classes, telles que les associations,
+les héritages et les dépendances, sont clairement définies pour montrer comment les différents
+composants interagissent et collaborent pour atteindre les objectifs de l'application.
+
+15
+
+Figure 2. 3:Diagramme de classe
+Le diagramme ci-dessus indique que :
+La structure d’une application de gestion dans une entreprise, comprenant plusieurs entités clés.
+La classe ‘User’, avec ses attributs communs comme `id`,`username`…, et une relation avec
+‘Département’, auquel chaque user appartient. Le ‘Département’ contient plusieurs ‘USER’
+et propose divers ‘Formation’. Chaque ‘Formation’ est associée à un seul ‘Département’ et
+comprend plusieurs ‘Question’. Les ‘options’ des questions sont liées aux quiz à travers la
+classe ‘Question, Les réponses des utilisateurs pour chaque quiz sont représentées par la classe
+‘userResponse, qui relie à un utilisateur spécifique. Les réunions sont gérées par la classe
+‘Réunion’, qui permet de suivre les participants, chaque utilisateur pouvant participer à
+plusieurs réunions, et chaque réunion ayant plusieurs participants. Les relations entre ces classes
+assurent une gestion complète des employés, des formations, des quiz, des résultats, et des
+réunions, facilitant ainsi l’administration et le suivi dans l’application.
+
+16
+
+2.4.3 Diagramme de séquence
+Un diagramme de séquence est une représentation graphique qui décrit comment les
+objets et les composants d'un système interagissent entre eux au fil du temps pour accomplir
+une fonction ou un scénario spécifique. Il met en évidence l'ordre chronologique des messages
+échangés entre les objets et montre comment les interactions se déroulent étape par étape.
+Chaque objet ou composant est représenté par une ligne de vie, et les messages échangés sont
+illustrés par des flèches indiquant la direction et le type de communication. Ce type de
+diagramme est essentiel pour comprendre le comportement dynamique du système, analyser les
+flux de communication et identifier les points de synchronisation et les dépendances
+temporelles dans le processus de réalisation des cas d'utilisation.
+Le diagramme représente les interactions et les échanges d'informations entre différents acteurs
+(Administrateur, Responsable, Employée) et le système de l'application "Welcome-Wise".
+
+Figure 2. 4:Diagramme de Séquence Global
+
+17
+
+Le diagramme ci-dessus indique :
+Les Interactions de l’Administrateur, du Responsable et de l’employée avec l’Application.
+Tableau 2. 5:Les interactions des acteurs
+ACTEUR
+
+INTERACTION
+
+Administrateur Connexion
+
+se connecte à
+l’application en envoyant
+ses informations de login,
+qui sont vérifiées par l’application.
+Tableau de bord
+Une fois la connexion confirmée,
+l’Administrateur accède au tableau de bord.
+Création d'employés
+crée de nouveaux employés en envoyant leurs
+informations à l'application, qui les enregistre et
+confirme la création.
+Affectation des
+affecte des départements aux employés par ville,
+départements
+crée des départements, et reçoit une confirmation
+de la création.
+Planification de
+planifie une réunion, demande les détails
+réunion
+nécessaires et fournit ces détails à l'application.
+L'application crée la réunion et envoie une
+confirmation.
+Suivi des résultats des accède aux résultats de chaque employé pour un
+employés
+suivi, et obtient une liste des employés avec leurs
+résultats et ceux passant des tests.
+
+Responsable
+
+Connexion
+Tableau de bord
+Assiste à des réunions
+
+Employée
+
+Connexion
+Accéder aux
+formations
+
+se connecte à l'application de la même manière
+que l'Administrateur.
+Une fois connecté, il accède à son tableau de
+bord.
+Consulte le planning des réunions de son
+département en affichant les réunions planifiées.
+Connecter et familiariser la culture générale
+d’entreprise
+Prendre des formations et passer des quiz
+
+18
+
+Figure 2. 5:Diagramme de Séquence cas d’administrateur
+Le diagramme ci-dessus indique :
+Les interactions d’administrateur avec le système
+
+
+Connexion :
+o Administrateur se connecte.
+o Système vérifie les informations.
+
+
+
+Gestion des fonctionnalités :
+o Administrateur gère les réunions, départements, employés, formations et quiz.
+o Système effectuer les actions de gestion correspondantes.
+
+
+
+Résultats des Employés :
+o Administrateur demande les résultats des employés.
+o Système affiche les résultats.
+
+19
+
+
+
+Questions générées par Open-Ai
+o Administrateur vérifie si les questions sont générées par Open-Ai.
+
+
+Oui : Question affichées.
+
+
+
+Non : Poursuite des autres actions.
+
+Ces diagrammes de séquence montrent les interactions dynamiques entre les différents
+utilisateurs (Administrateur, Responsable, Employée) et le système de l'application "WelcomeWise", ainsi que les communications avec l'API Open-AI pour générer des questions de
+formation. Chaque étape décrit le flux d'information et les échanges nécessaires pour accomplir
+diverses tâches dans l'application, de la connexion à la gestion des employés, des départements,
+des réunions, et de la formation.
+2.4.4 Diagramme d’activités
+Un diagramme d'activités est une représentation graphique qui décrit les différents
+processus ou flux de travail au sein d'un système informatique ou d'une application. Il met en
+évidence les étapes successives, les décisions, les boucles, et les parallélismes qui composent
+un processus, en montrant les actions et les événements qui se produisent à chaque étape.
+Les diagrammes présentent les processus de gestion des formations, des quiz, des résultats, et
+des réunions dans l’application. Le diagramme d’activité montre comment les utilisateurs
+interagissent avec le système pour accomplir diverses tâches.
+
+20
+
+Diagramme d’activités de l’Administrateur :
+
+Figure 2.6:Diagramme d'activités de l'administrateur
+Le diagramme décrit les actions principales que l’administrateur peut effectuer dans
+l’application. L’administrateur commence par la connexion au système, Une fois authentifié, il
+accède à son tableau de bord, où il peut gérer les départements, les employés, les formations, et
+les quiz. Lors de la gestion des quiz, l’administrateur peut générer des questions via open-AI,
+Si la génération des questions échoue, il doit recréer le quiz à partir de zéro. De plus,
+l’administrateur peut consulter les résultats des employés que si ces derniers ont passé les quiz.
+Enfin, l’administrateur peut également gérer les réunions au sein de l’entreprise. Ce diagramme
+reflète le contrôle complet que l’administrateur a sur la gestion des ressources et des processus
+de formation dans l’application.
+
+21
+
+Diagramme d’activités de L’employé:
+
+Figure 2.7:Diagramme d’activités de l’employé
+Ce diagramme d’activités illustre le parcours d’un employé dans l’application. L’employé
+commence par se connecter au système, et s’il réussit à s’authentifier, il accède à son tableau
+de bord, Depuis le tableau, il peut accéder à son département et consulter les formations
+disponibles. Une fois une formation terminée, l’employé doit passer un quiz associé. La
+correspondante. Enfin, après avoir passé le quiz, l’employé peut consulter ses résultats. Ce
+processus guide l’employé à travers les étapes nécessaires pour compléter sa formation et
+évaluer ses compétences.
+22
+
+Dans les deux schémas précédents exposent des exemples concrets d’employés et
+d’administrateur dans l’application.
+
+2.5 Conclusion
+Ce chapitre d’analyse et conception, modélisation nous a permis de définir les bases de
+notre projet. En spécifiant les acteurs, les cas d'utilisation et en créant des diagrammes, nous
+avons établi une compréhension claire des fonctionnalités attendues et des interactions entre les
+acteurs et l'application. Ces éléments seront essentiels pour la phase de développement et
+d'implémentation du projet.
+
+23
+
+Chapitre 3 : Technologies et Outils Utilises
+
+24
+
+3.1 Introduction
+Dans ce chapitre, nous allons détailler les différentes technologies et outils utilisés dans
+le développement de notre application. Chaque technologie été sélectionnée en fonction de ses
+avantages et de sa pertinence pour les besoins spécifiques du projet Nous aborderons également
+les outils de développement qui ont facilite la création, le test et le déploiement de l’application.
+Ces technologies et outils combines ont permis de construire une solution robuste et efficace
+pour améliorer l’intégration des nouveaux employés au sein de l’entreprise.
+
+3.2 Technologies
+ Technologies utilisées pour le développement back-end :
+
+Java est un langage de programmation oriente objet et indépendant de la
+plateforme, développé par Sun Microsystems (maintenant Oracle).Conçu
+pour être simple, sur et portable, il permet de crée des applications
+pouvant s’exécuter sur toute machine équipée de la java
+
+Virtual
+
+Machine(JVM). Sa syntaxe claire et ses nombreuses bibliothèques font
+de Java un choix populaire pour le développement d’applications web,
+mobiles et embarquées.
+
+Spring Boot est un Framework Java qui simplifie le développement
+d’applications en offrant une configuration automatique et des outils
+intègres pour une mise en œuvre rapide et efficace. Il est conçu pour créer
+des applications robustes et évolutives avec une configuration minimale.
+Facilitant ainsi le développement de micro-service et d’applications
+prêtes pour la production. Grace à ses fonctionnalités intégrées de gestion
+et de surveillance, Spring Boot permet de se connecter sur le
+développement plutôt que sur la configuration complexe.
+
+25
+
+Open-AI est une organisation de recherche en intelligence artificielle
+dédiée à la création et à la promotion d’IA avancée de manière sure et
+bénéfique pour l’humanité. Open-Ai développé des modèles d’IA de
+pointe, tels que Chat-GPT. Qui utilisent des techniques d’apprentissage
+automatique pour comprendre et générer du langage humain.
+
+JWT est un standard pour la transmission sécurisée d’informations entre
+parties sous forme de jetons JSON. Utilises principalement pour
+l’authentification et l’autorisation, LES JWT se composent d’un en-tête,
+d’une charge utile et d’une signature, garantissant ainsi la sécurité et
+l’intégrité des données échangées, Ce format compact facilite la gestion
+des sessions et des permissions dans les applications web.
+
+API REST est une architecture de services web qui utilise les méthodes
+http pour gérer les ressources via des requetés comme GET, POST, PUT
+et DELETE. En se basant sur des principes simples et des formats de
+données telles que JSON ou XML les API REST facilitent la
+communication entre clients et serveurs offrant ainsi une solution
+flexibles pour les applications web modernes.
+
+CUBA TEMPLATE est un modèle de projet préconfigure fourni par
+CUBA Platform pour accélérer le développement d’application
+d’entreprise. Il offre une base structurée avec des configurations et des
+composants prêts a l’emploi. Permettant aux développeurs de démarrer
+rapidement avec une architecture solide et des fonctionnalités courantes
+déjà l’extension des applications, tout en assurant une cohérence et une
+efficacité accrues dans le processus de développement.
+
+26
+
+Eureka Server est un composant essentiel de l’écosystème Spring
+Cloud, utilise pour la découverte de services dans un micro-service. Il
+agit comme un registre ou tous les micro-services d’une application
+peuvent s’enregistre auprès de l’Eureka Server, fournissant son adresse
+et d’autres informations nécessaires. D’autres Services peuvent alors
+consulter ce registre pour localiser et communiquer avec les services
+nécessaires, facilitant ainsi l’interaction entre les micro-services sans
+qu’ils aient besoin de connaitre leurs adresses exactes à l’avance.
+
+ Technologie utilisé pour la base de données :
+
+SQL est un langage de programmation spécialement conçu pour gérer
+et manipuler des bases de données relationnelles. Il est utilisé pour
+exécuter des requêtes, insérer des données, mettre à jour des
+enregistrements, supprimer des entrées, et créer ou modifier la structure
+des bases de données.
+
+ Technologies utilisées pour le développement Front-end:
+
+REACT est une bibliothèque JavaScript pour la création d’interfaces
+utilisateurs dynamiques et interactives. Développée par Facebook, elle
+permet de construire des composants réutilisables qui se mettent à jour
+automatiquement en fonction des données, Offrant ainsi une expérience
+utilisateur fluide et performante. React est particulièrement adapte pour
+le développement d’application web modernes, notamment les Single
+Page Application (SPA).
+
+27
+
+HTML est le langage de balisage standard utilisé pour créer des pages
+web. Il structure le contenu d’une page n utilisant une série d’éléments
+ou de balises qui définissent différents types de contenu, tels que des
+titres, des phrases, des images, des liens, et des formulaires.
+
+CSS est un langage de style utilise pour décrire l’apparence et la mise en
+page d’un document écrit en HTML. Il permet de contrôler l’apparence
+des éléments sur une page web, y compris les couleurs, les polices, les
+marges, les espacements, la disposition, et bien plus encore.
+
+Bootstrap est un Framework front-end open-source conçu pour faciliter
+et accélérer le développement de sites web réactifs t mobiles. Il fournit
+une collection de composants CSS et JAVASCRIPT prédéfinis qui
+peuvent être facilement intègres dans des projets web permettant aux
+développeurs de crées des interfaces utilisateur élégantes et
+fonctionnelles sans avoir à écrire beaucoup de code personnalisé.
+
+3.3 Outils
+ Outils utilisées pour le développement back-end :
+
+Intellij IDEA est un environnement de développement intégré (IDE) très
+populaire, développé par JetBrains, spécialement conçu pour le
+développement en Java, Cependant, Intellij prend en charge une
+multitude d’autre langages de programmation tels que Koltin, Groovy,
+Scala, JavaScript, TypeScript, et bien d’autre encore. C’est un outil
+puissant et riche en fonctionnalités, utilise par de nombreux développeurs
+pour crées des applications de toutes sortes, des simples applications de
+bureau aux systèmes complexes basés sur des micro-services.
+
+28
+
+SQL WorkBench est un outil de gestion de bases de données
+relationnelles qui permet d’exécuter des requêtes SQL, de concevoir des
+bases de données, et de gérer les données de manière visuelle. Cependant,
+il semble que vous fassiez référence à SQL Workbench/j, un outil de
+gestion d base de données open-source spécifique.
+
+POSTMAN est un outil populaire utilise pour tester le API. Il fournit une
+interface conviviale pour envoyer des requêtes http aux serveurs web et
+voir les réponses. Postman est particulièrement utile pour les
+développeurs back-end, les testeurs QA, et les ingénieurs DevOps qui
+travaillent sur le développement, le test et le débogage d’APIs Restful
+
+ Technologies utilisées pour le développement Front-end:
+
+VS Code est un éditeur de code source développé par Microsoft. C’est un
+outil extrêmement populaire parmi les développeurs grâce à sa légèreté,
+sa rapidité, et ses nombreuses fonctionnalités extensibles.
+
+ Technologies utilisées pour La conception des diagrammes:
+
+UML est un langage de modélisation graphique utilisé pour représenter
+visuellement les concepts et les interactions dans les systèmes logiciels.
+Il offre une notation standardisée pour la modélisation des structures,
+des comportements et des relations des différents éléments d'un
+système.
+
+29
+
+LucidChart est outil de création de digrammes en ligne qui permet de
+concevoir, partager t collaborer sur des diagrammes, des organigrammes,
+des cartes mentales, des maquettes, et bien plus encore. Il est largement
+utilise pour visualiser des processus, modéliser des systèmes, et organiser
+des idées. Lucidchart est accessible via un navigateur web, ce qui le rend
+pratique pour le travail en équipe, car plusieurs utilisateurs peuvent
+collaborer en temps réel. Il offre une interface intuitive avec de
+nombreuses options de personnalisation, et il s’intègre avec d’autres
+outils comme Google Drive, Slack, et Microsoft Office.
+
+3.4 Conclusion
+Ce chapitre explore les différentes technologies et outils employés pour le développement
+de notre projet. Chaque composant technologique a été choisi avec soin pour répondre aux
+exigences spécifiques de l’application tout en assurant performance, sécurité et évolutivité.
+
+30
+
+Chapitre 4 : Architecture technique &
+Réalisation
+
+31
+
+4.1 Introduction
+Ce chapitre offre une vue d’ensemble approfondie de l’architecture technique du projet
+« welcome-wise », ainsi qu’une présentation détaillée des interfaces de l’application, Le
+projet »welcome-wise » a été conçu pour faciliter l’intégration des nouveaux employés au sein
+de l’entreprise.
+
+4.2 Architecture technique de l’application
+L'architecture micro-services est une approche de conception de logiciels où une
+application est structurée comme une collection de services autonomes et indépendamment.
+Chaque service est conçu pour gérer une fonction spécifique de l'application et communique
+avec d'autres services via des interfaces bien définies, souvent en utilisant des API REST ou
+des messages asynchrones. Cette approche permet une grande flexibilité, évolutivité et
+résilience, car chaque service peut être développé, déployé et mis à l'échelle indépendamment
+des autres.
+Donc cette architecture est efficace pour construire des systèmes complexes en décomposant
+l’application en unités plus petites et plu maniables, chacune se concentrant sur une
+fonctionnalité spécifique tout en collaborant pour offrir une solution cohérente et évolutive.
+
+Figure 4. 8:Architecture micro-service du projet
+
+32
+
+L’architecture micro-services du projet est composée des éléments suivants :
+
+
+Eureka Server :
+o Rôle : Sert de serveur de découverte de services. Il permet aux différents services
+de s’enregistrer et de se découvrir mutuellement. Cale facilite la communication
+et l’intégration entre les services sans avoir besoin de configurations manuelles
+des adresses de chaque service.
+o Interactions : Tous les services s’enregistrent auprès d’Eureka pour être
+découverts et communiquer.
+
+
+
+Service d’Authentification :
+o Rôle: Gère l’authentification des utilisateurs en générant des JSON Web
+Tokens(JWT). Ces tokens sont utilisés pour sécuriser l’accès aux autres services
+o Interactions : Valide les JWT pour tous les autres services afin de garantir que
+les requêtes sont authentifiées et autorisées.
+
+
+
+Service Département :
+o Rôle : Gère les informations relatives aux départements au sein d l’organisation
+o Interactions : Accède à la base de données pour effectuer des opérations CRUD
+sur des informations des départements.
+
+
+
+Service Employé :
+o Rôle : Gère les données des employés, telles que les informations personnelles
+et professionnelles.
+o Interactions : Accède à la base de données pour stocker et récupérer les données
+des employés.
+
+
+
+Service Formation :
+o Rôle : Gère les modules de formation disponible pour les employés.
+o Interactions : Accède à la base de données pour gérer les modules de formation.
+
+33
+
+
+
+Service Quiz :
+o Rôle : Génère des questions de quiz de l’API Open-Ai. Ce service est
+responsable de la création des questions et de leur gestion.
+o Interactions : Interagit avec l’API Open-Ai pour générer des questions en envoie
+les résultats au service Résultats pour le stockage des réponses et des scores.
+
+
+
+Service Résultat :
+o Rôle : Gère les résultats des quiz, y compris les réponses des utilisateurs et les
+scores.
+o Interaction : Stocke les résultats dans la base de données des résultats.
+
+
+
+Service Réunion :
+o Rôle : Gère la planification et la gestion des réunions au sein de l’organisation.
+o Interactions : Accède à la base de données pour stocker les informations sur les
+réunions et les gérer.
+
+
+
+Base de données :
+o Rôle : Stocke les informations partagées entre tous les services, telles que les
+données des employés des départements, des résultats de quiz, etc.
+o Interactions : Tous les services accèdent à la base de donnes pour effectuer des
+opérations CRUD et stocker ou récupérer des données.
+
+Cette architecture permet une séparation claire des responsabilités, une meilleure évolutivité.
+Et une gestion simplifiée des différentes parties de l’application. Les services peuvent être
+développes et déployés indépendamment, ce qui facilite la maintenance et l’évolution de
+l’application dans son ensemble.
+
+34
+
+4.3 Présentation de l’application
+4.3.1 Accès à l’application
+La page d’authentification est interface sécurisé qui permet uniquement aux utilisateurs
+avec les rôles spécifiques d’accéder à l’application. Cette page joue un rôle clé dans le contrôle
+de l’accès à l’ensemble du système. Son objectif principale est d garantir la confidentialité et la
+sécurité des données sensibles en s’assurant que seules les personnes autorisées peuvent y
+accéder. Elle est conçue de manière à nécessiter des informations D’identification spécifiques,
+telles qu’un login et un mot de passe et la sélection de son rôle, pour vérifier l’identité.
+
+Figure 4.9:Page d'authentification
+
+4.3.2 La page d’accueil de l’application
+La page d’accueil, dédiée au rôle d’administrateur de l’application « welcomWise »
+offre une vue d’ensemble pratique des employés, des départements, des formations, des quiz,
+résultats, et des réunions. Les autres fonctionnalités sont organisées dans des sections dédiées.
+Ce qui permet de gérer facilement toutes les opérations.
+
+35
+
+Figure 4.10:Page d'accueil dédiée au rôle d’administrateur
+4.3.3 Page de gestion des départements
+Formulaire de gestion des départements destine à l’administrateur de l’application,
+offrant une vue d’ensemble pour gérer les départements. Cela inclut l’affichage de la liste des
+départements, le filtrage par départements, ainsi que la possibilité d’ajouter, de modifier et de
+supprimer des départements.
+
+Figure 4.11: Formulaire des départements
+36
+
+4.3.4 Formulaires d’ajout et de modification, et suppression des départements
+Formulaire pour ajouter un nouveau département dans l’application qui permet aux
+administrateurs d’ajouter facilement des départements tout en capturant toutes les informations
+nécessaires.
+
+Figure 4.12 : Formulaire d’ajout de département
+
+Formulaire de modification et suppression d’un département dans l’application qui
+facilite aux administrateurs de modifier les informations d’un département ou bien supprimer
+définitivement.
+
+Figure 4.13:Formulaire d'update et suppression d'un département
+
+37
+
+4.3.5 Page de gestion des employés
+Formulaire de gestion des employées destine à l’administrateur et aux ressources
+humaines, permettant la gestion des employés ayant le rôle utilisateur et de leur départements,
+Il inclut l’affichage de la liste des employés avec leur départements assigne, un filtrage par le
+nom d’utilisateur ainsi que la possibilité de modifier et de supprimer.
+
+Figure 4.14:Page Gestion des employés
+
+4.3.6 Formulaire d’ajout d’un employé
+Formulaire pour ajouter un nouvel utilisateur, ce formulaire inclut une liste déroulante
+pour sélectionner le département assigne à cet utilisateur.
+
+.
+
+Figure 4.15:Fomulaire d'ajouter un nouvel employé
+
+38
+
+4.3.7 Gestion des formations
+Formulaire de gestion des formations destine à l’administrateur, permettant la gestion
+des formations et leur départements, Il inclut l’affichage de la liste des formations avec leur
+départements assigne, un filtrage par le titre de formation ainsi que la possibilité de modifier et
+de supprimer.
+
+Figure 4.16:Formulaire de gestion des formations
+Formulaire conçu pour faciliter l’ajout d’une formation au sein d’un département
+spécifique, permettant ainsi une gestion efficace et organisée des programmes de formation
+attribués aux différents départements.
+
+Figure 4.17:Formulaire d'ajouter une formation
+39
+
+4.3.8 Page d’accueil pour les utilisateurs ayant le rôle ‘USER’
+Page
+
+d’accueil,
+
+dédiée
+
+aux
+
+utilisateurs
+
+ayant
+
+le
+
+rôle
+
+‘USER’
+
+dans
+
+l’application « WelcomeWise », est conçue pour offrir une expérience immersive et engageante,
+en facilitant la découverte d la culture d’entreprise, les formations, et la participation aux quiz.
+
+Figure 4.18: Page d’accueil pour les utilisateurs ayant le rôle ‘USER’
+
+40
+
+4.3.9 Page de suivre des formations pour les utilisateurs ayant le rôle ‘USER’
+Pour accéder aux formations disponibles, l’employé doit d’abord se connecter. Une fois
+connecte, il pourra visualiser les formations spécifique au département auquel il est assigne,
+
+Figure 4.19:Page d'accès aux formations
+4.3.10 Liste des formations à suivre
+Apres une connexion réussie, La page affichera les formations spécifique au
+département de l’utilisateur connecte.
+
+Figure 4.20:Liste des formations spécifiques
+
+41
+
+Figure 4.21:Terminaison de la liste des formations
+
+4.4 Conclusion
+Ce chapitre a permis de dresser un tableau complet de l’architecture technique du projet
+et de ses interfaces. L’analyse de l’architecture a montré comment les différentes et
+performante. La présentation des interfaces a illustre l’application de ces concepts.
+
+42
+
+Conclusion Générale et Perspective
+Au cours de mon stage de cinq mois, j’ai eu la chance d’acquérir une expérience pratique
+significative en développant l’application web « Welcome-wise », dédiée à l’intégration des
+nouveaux employés, Ce stage a été l’occasion idéale de mettre en œuvre les connaissances
+théoriques acquises durant ma formation tout en développant des compétences pratiques dans
+un contexte professionnel réel.
+Travailler aux cotes d’une équipe talentueuse m’a permis d’apprendre et de progresser de
+manière continue. J’ai été impliqué dans toutes les phrases du projet, de la conception a la mise
+en œuvre, ce qui m’a permis de comprendre en profondeur les enjeux et défis associes a la
+création d’une application web complexe.
+J’ai également renforce mes compétences en communication, en résolution de problèmes et en
+collaboration, j’ai appris e m’adapter aux exigences changeantes, a gérer efficacement mon
+temps, et à travailler avec diverses parties prenantes pour atteindre les objectifs du projet.
+Ce stage m’a également familiarise avec les technologies et outils spécifiques nécessaires au
+développement d’applications web. En utilisant des logiciels et méthodologies modernes, j’ai
+approfondi ma compréhension pratique des concepts théoriques et j’ai vu l’impact de mon
+travail sur l’intégration des nouveaux employés.
+En conclusion, ce stage a été une expérience extrêmement enrichissante qui a non seulement
+affine mes compétences professionnelles, mais aussi offert une vision concrète de la création et
+de la gestion d’une application web. J’exprime ma gratitude envers l’équipe pour son accueil et
+son soutien. Cette expérience a constitué un tremplin essentiel pour mon développement
+professionnel et a établi une base solide pour ma future carrière.
+A l’avenir, l’application « WelcomeWise » pourrait être enrichie par l’ajout des services
+manquantes, tels que la gestion des formations continues, l’évaluation de la satisfaction des
+employés après leur intégration, ou encore l’intégration d’outils de collaboration internes. De
+plus, le développement d’une version mobile de l’application permettrait de répondre aux
+besoins croissants de mobilité des utilisateurs, rendant l’intégration des nouveaux employés
+encore plus fluide et accessible. D’autres fonctionnalités, comme l’analyse prédictive pour
+identifier les besoins de formation futurs ou l’intégration d’un système de feedback en temps
+réel, pourraient également être envisagées pour améliorer l’efficacité de l’application et mieux
+répondre aux exigences des entreprises modernes.
+43
+
+Références
+[1] « Menara Holding ». (n.d). Présentation de l’entreprise. Depuis le site :
+https://menara-holding.ma/
+Cette source fournit des informations générales sur l’entreprise, y compris son histoire,
+ses
+
+secteurs d’activités, et ses principaux projets.
+
+[2] « Menara Holding ». (n.d.). Fiche technique de l’entreprise. Depuis le site :
+https://menara-holding.ma/
+Cette source contient les informations techniques détaillées sur Menara Holding, telles
+que la raison sociale, la forme juridique, le capital social, et les chiffres clés.
+[3] « SCRUM Alliance ». (n.d). Scrum Guide. Depuis
+Scrum Guide.
+Ce guide offre des détails sur le cadre Scrum, Les rôles et processus impliqués, essentiel
+pour comprendre les méthodologies adoptée pour le projet.
+[4] « Formation en ligne ». (n.d.). Cours sur Spring Boot, React et Open-Ai. Depuis les
+plateformes:
+https://academy.zerotomastery.io/
+https://pro.academind.com/
+Cette source comprend les formations en ligne utilisées pour acquérir les compétences
+nécessaire au développement du projet, telles que Spring Boot, React et Open-Ai.
+[5] « Open-Ai ». (n.d.). Documentation de l’API Open-Ai. Depuis Open Api
+Documentation :
+https://platform.openai.com
+Documentation sur l’intégration de l’API Open-AI pour générer des questions de quiz
+dans le projet.
+[6] « Microsoft Project ». (n.d). Diagramme de GANTT. Depuis
+Microsoft Project.
+Outil essentiel pour la planification et le suivi des taches du projet, permettant de
+visualiser la chronologie des différentes étapes et de gérer les ressources.
+44
+
+[7] « Documentation officielle de Spring Boot ». (n.d). Spring Boot Documentation. Depuis
+Spring Boot Documentation.
+Documentation utilisée pour le développement du back-end du projet.
+[8] « React Documentation ». (n.d). Documentation React. Depuis
+React Documentation.
+Documentation essentielle pour le développement front-end du projet.
+
+45
+
+

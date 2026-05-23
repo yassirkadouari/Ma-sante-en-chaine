@@ -300,7 +300,7 @@ export async function encryptMedicalPayload(
 
   for (const walletAddress of recipients) {
     let recipientPublicKeyHex: string | null;
-    if (walletAddress === sender.walletAddress) {
+    if (walletAddress.toLowerCase() === sender.walletAddress.toLowerCase()) {
       recipientPublicKeyHex = sender.publicKeyHex;
     } else {
       recipientPublicKeyHex = await getEncryptionPublicKey(walletAddress);
@@ -401,7 +401,7 @@ export async function decryptMedicalPayload<T>(encrypted: EncryptedPayload, _leg
 
   const receiver = await deriveWalletKeyPair();
   const slot = (encrypted.encryptedKeys || []).find(
-    (item) => normalizeWallet(item.walletAddress) === normalizeWallet(receiver.walletAddress)
+    (item) => normalizeWallet(item.walletAddress).toLowerCase() === normalizeWallet(receiver.walletAddress).toLowerCase()
   );
 
   if (!slot) {

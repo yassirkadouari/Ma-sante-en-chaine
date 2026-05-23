@@ -204,8 +204,8 @@ export async function resolveWalletRoleOnChain(walletAddress: string): Promise<R
     const doc = await readGovernanceDocument(cid);
     if (!doc) continue;
 
-    const docWallet = normalizeWallet(doc.walletAddress);
-    if (!docWallet || docWallet !== wallet) continue;
+    const docWallet = (doc.walletAddress || "").trim().toLowerCase();
+    if (!docWallet || docWallet !== wallet.toLowerCase()) continue;
 
     const ts = governanceTimestamp(doc.assignedAt);
     if (!bestDoc || ts >= bestDocTs) {
@@ -287,7 +287,7 @@ export async function resolveWalletIdentityOnChain(walletAddress: string): Promi
     if (!doc) continue;
 
     const docWallet = normalizeWallet(doc.walletAddress);
-    if (!docWallet || docWallet !== wallet) continue;
+    if (!docWallet || docWallet.toLowerCase() !== wallet.toLowerCase()) continue;
 
     const fullName = String(doc.fullName || `${doc.firstName || ""} ${doc.lastName || ""}`).trim() || null;
     resolved = mergeIdentity(resolved, {

@@ -1,0 +1,34 @@
+@startuml
+autonumber
+actor "Pharmacien" as Ph
+participant "Frontend (Next.js)" as F
+participant "Smart Contract\n(Substrate)" as SC
+participant "IPFS (Pinata)" as I
+participant "Crypto Module\n(TweetNaCl/AES)" as C
+
+Ph -> F : Saisit/Scanne le RecordId de l'ordonnance
+F -> SC : get_anchor(RecordId)
+SC --> F : Retourne l'ancrage (CID, Hash, Statut, Wallets)
+F -> F : Vérifie que le statut == PRESCRIBED
+F -> F : Vérifie que le pharmacien est autorisé (ACL)
+F -> I : Télécharge le document chiffré via le CID
+I --> F : Retourne le blob chiffré (Enveloppe)
+F -> C : Demande de décryptage
+C -> C : Ouvre la boîte NaCl avec la clé privée du pharmacien
+C -> C : Récupère la clé AES-256
+C -> C : Déchiffre le ciphertext (AES-GCM)
+C --> F : Retourne le JSON en clair (ordonnance)
+F -> F : Recalcule le Hash SHA-256 du JSON
+F -> F : Compare Hash local VS Hash de l'ancrage blockchain
+alt Hash Correspondant
+    F --> Ph : Affiche "INTÉGRITÉ VÉRIFIÉE" (pastille verte)
+    Ph -> F : Clique sur "Délivrer"
+    F -> SC : mark_delivered(RecordId)
+    SC -> SC : Vérifie caller autorisé + statut valide
+    SC -> SC : Change statut → DELIVERED
+    SC --> F : Émet l'événement RecordStatusChanged
+    F --> Ph : Affiche "Ordonnance délivrée avec succès"
+else Hash Différent
+    F --> Ph : ALERTE ROUGE "FALSIFICATION DÉTECTÉE"\nDélivrance bloquée
+end
+@enduml

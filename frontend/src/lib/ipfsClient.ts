@@ -95,7 +95,11 @@ function isRateLimitError(error: unknown): boolean {
   return (
     message.includes("rate limit") ||
     message.includes("too many requests") ||
-    message.includes("429")
+    message.includes("429") ||
+    message.includes("403") ||
+    message.includes("forbidden") ||
+    message.includes("blocked") ||
+    message.includes("plan usage limit")
   );
 }
 

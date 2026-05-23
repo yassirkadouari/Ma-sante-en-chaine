@@ -1,0 +1,22 @@
+@startuml
+autonumber
+actor "Médecin" as M
+participant "Frontend (Next.js)" as F
+participant "Crypto Module\n(TweetNaCl/AES)" as C
+participant "IPFS (Pinata)" as I
+participant "Smart Contract\n(Substrate)" as SC
+
+M -> F : Remplit le formulaire de l'ordonnance
+F -> C : Demande chiffrement des données (ZKP)
+C -> C : Génération clé AES-256 + IV
+C -> C : Chiffrement du document (AES-GCM)
+C -> C : Chiffrement de la clé AES pour les destinataires (Curve25519)
+C --> F : Retourne l'enveloppe chiffrée
+F -> F : Calcule le Hash SHA-256 du JSON canonique
+F -> I : Téléverse (Upload) l'enveloppe chiffrée
+I --> F : Retourne le Content ID (CID)
+F -> SC : store_anchor(RecordId, Hash, CID, Wallets)
+SC -> SC : Vérifie les signatures et droits
+SC --> F : Émet l'événement AnchorStored
+F --> M : Affiche "Ordonnance sécurisée et enregistrée"
+@enduml

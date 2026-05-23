@@ -1,0 +1,41 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Patient" as P
+actor "Médecin" as M
+actor "Pharmacie" as Ph
+actor "Assurance" as A
+
+rectangle "Ma Santé En Chaîne (Blockchain & IPFS)" {
+  usecase "Consulter son historique médical" as UC1
+  usecase "Gérer les accès (Grant/Revoke)" as UC2
+  usecase "Demander un remboursement (Claim)" as UC3
+  
+  usecase "Créer un événement médical (Visite)" as UC4
+  usecase "Émettre une ordonnance chiffrée" as UC5
+  
+  usecase "Scanner une ordonnance" as UC6
+  usecase "Vérifier l'intégrité (Hash)" as UC7
+  usecase "Délivrer une ordonnance" as UC8
+  
+  usecase "Auditer une réclamation (Claim)" as UC9
+  usecase "Rembourser une réclamation" as UC10
+}
+
+P --> UC1
+P --> UC2
+P --> UC3
+
+M --> UC1
+M --> UC4
+M --> UC5
+
+Ph --> UC6
+Ph --> UC7
+Ph --> UC8
+
+A --> UC9
+A --> UC10
+
+@enduml
